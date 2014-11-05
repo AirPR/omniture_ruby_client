@@ -1,0 +1,37 @@
+omniture: 
+  username: wabapiuser:AirPR
+  shared_secret: a80962d1ed73380f65e3afec525616be
+  verify_mode: null
+  environment: :san_jose
+  wait_time: 10
+  report_suite_id: "airprptnrdev"
+expected_values:
+  march_1_2013_pageviews_for_chrome_25: 0
+  march_1_2013_pageviews_for_ie_10: 0
+  valid_page_name_to_find: "Unknown page"
+  march_1_2013_pageviews_for_chrome_25_for_specific_page: 0
+  march_1_2013_visits_for_chrome_25: 0
+  march_1_2013_total_pageviews: 0
+  march_1_2013_total_visits: 0
+visitor_id:
+  good:
+    -
+      hex: "5C2EEC31F9C9517E-36D0A36E5479E9DA"
+      dec: "6642506199806333310_3949836567462930906"
+    -
+      hex: "4975A1D50E165FFC-3EF412C6D5687555"
+      dec: "5293314873480339452_4536271369862149461"
+  bad:
+    -
+      hex: null
+      dec: null
+    -
+      hex: ":"
+      dec: g
+  mismatch:
+    -
+      hex: "4975A1D50E165FFC-3EF412C6D5687555"
+      dec: "6642506199806333310_3949836567462930906"
+    -
+      hex: "5C2EEC31F9C9517E-36D0A36E5479E9DA"
+      dec: "5293314873480339452_4536271369862149461"

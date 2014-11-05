@@ -11,7 +11,7 @@ module ROmniture
       :san_jose_beta  => "https://beta-api.omniture.com/admin/1.3/rest/",
       :dallas_beta    => "https://beta-api2.omniture.com/admin/1.3/rest/",
       :sandbox        => "https://api-sbx1.omniture.com/admin/1.3/rest/"
-    }    
+    }
     
     def initialize(username, shared_secret, environment, options={})
       @username       = username
@@ -48,6 +48,14 @@ module ROmniture
         log(Logger::ERROR, "Could not queue report.  Omniture returned with error:\n#{response.body}")
         raise "Could not queue report.  Omniture returned with error:\n#{response.body}"
       end
+    end
+
+    def get_dw_result(url)
+      response = do_dw_request(url)
+   
+      clean_body = self.class.clean_dw_response(response.body)
+
+      self.class.parse_dw_csv(clean_body)
     end
     
     attr_writer :log
@@ -110,8 +118,46 @@ module ROmniture
       end
     end
 
+    ##
+    # Removes some ugliness from the Adobe response.
+    #
+    def self.clean_dw_response(body)
+      body.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, "")
+    end
 
+    ##
+    # Parses the Data Warehouse CSV file into final format
+    #
+    def self.parse_dw_csv(clean_body)
+      parsed = CSV.parse(clean_body)
+      parsed
+    end
 
+    def do_dw_request(url)
+      generate_nonce
+      
+      log(Logger::INFO, "Created new nonce: #{@password}")
+      
+      request = HTTPI::Request.new
+
+      request.url = url
+      request.headers = request_headers
+
+      if @verify_mode
+        request.auth.ssl.verify_mode = @verify_mode
+      end
+
+      response = HTTPI.post(request)
+
+      if response.code >= 400
+        log(:error, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+        raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
+      end
+
+      log(Logger::INFO, "Server responded with response code #{response.code}.")
+
+      response
+    end
     
     def send_request(method, data)
       log(Logger::INFO, "Requesting #{method}...")

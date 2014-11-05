@@ -31,8 +31,8 @@ class ClientTest < Test::Unit::TestCase
     response = @client.get_report "Report.QueueOvertime", {
       "reportDescription" => {
         "reportSuiteID" => "#{@config["report_suite_id"]}",
-        "dateFrom" => "2011-01-01",
-        "dateTo" => "2011-01-10",
+        "dateFrom" => "2014-10-30",
+        "dateTo" => "2014-10-31",
         "metrics" => [{"id" => "pageviews"}]
         }
       }
@@ -47,8 +47,8 @@ class ClientTest < Test::Unit::TestCase
       response = @client.get_report("Report.QueueTrended", {
         "reportDescription" => {
           "reportSuiteID" => @config["report_suite_id"],
-          "dateFrom" => "2011-01-01",
-          "dateTo" => "2011-01-11",
+          "dateFrom" => "2014-10-30",
+          "dateTo" => "2014-10-31",
           "metrics" => [{"id" => "pageviews"}, {"id" => "event11"}],
           "elements" => [{"id" => "siteSection"}]
         }

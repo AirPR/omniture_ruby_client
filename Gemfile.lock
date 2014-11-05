@@ -1,0 +1,20 @@
+PATH
+  remote: .
+  specs:
+    romniture (0.0.4)
+      httpi
+      json
+
+GEM
+  remote: http://rubygems.org/
+  specs:
+    httpi (2.2.7)
+      rack
+    json (1.8.1)
+    rack (1.5.2)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  romniture!
