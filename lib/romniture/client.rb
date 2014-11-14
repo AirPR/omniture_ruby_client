@@ -1,3 +1,5 @@
+
+
 module ROmniture
   
   class Client
@@ -21,9 +23,10 @@ module ROmniture
       @wait_time      = options[:wait_time] ? options[:wait_time] : DEFAULT_REPORT_WAIT_TIME
       @log            = options[:log] ? options[:log] : false
       @verify_mode    = options[:verify_mode] ? options[:verify_mode] : false
+      @insert_url     = "https://airpr.d1.sc.omtrdc.net/b/ss/airprptnrdev/6/"
       HTTPI.log       = true
     end
-        
+
     def request(method, parameters = {})
       response = send_request(method, parameters)
 
@@ -35,6 +38,36 @@ module ROmniture
         log(Logger::ERROR, "Error in request response:\n#{response.body}")
         raise "Error in request response:\n#{response.body}"
       end
+    end
+    # insert_request: Inserts data to Catalyst.
+    #
+    # data. dict. The field values to insert. See 
+    #   https://marketing.adobe.com/developer/en_US/documentation/data-insertion/r-supported-tags
+    #
+    # returns dict. The server response.
+
+    def insert_request(data)
+      # Validate the visitorID and convert to hex if necessary 
+      data['visitorID'] = ROmniture::VisitorID.new(data['visitorID']).dec
+      response = send_insert_request(data)
+
+      begin
+        parsed = ActiveSupport::XmlMini::parse(response.body)
+        status = parsed['status']['__content__']
+      rescue Exception => e
+        parsed = {}
+        log(Logger::ERROR, "Error in request response:\n#{response.body}")
+        log(Logger::ERROR, e.to_s)
+      end
+
+      log(Logger::INFO, "Successfully inserted for #{data['visitorID']} - #{data['timestamp']}")
+
+      if status != "SUCCESS"
+        raise "Insert did not succeed."
+        binding.pry
+      end
+
+      parsed
     end
     
     def get_report(method, report_description)      
@@ -51,11 +84,113 @@ module ROmniture
     end
 
     def get_dw_result(url)
-      response = do_dw_request(url)
-   
-      clean_body = self.class.clean_dw_response(response.body)
+      # map_function = lambda do |records|
+      #   puts "[recordset]"
+      #   records.each do |record|
+      #     log(Logger::INFO,record)
+      #   end
+      #   puts "[/recordset]"
+      # end
 
-      self.class.parse_dw_csv(clean_body)
+      map_function = lambda do |records|
+        @logger.info("[recordset]")
+        records.each do |record|
+          @logger.info(record)
+          if record.length
+            url = record[1]
+            if url != nil
+              #puts record
+              puts url
+              # per = get_per_from_url(url)
+              # if per.present?
+              #   data_store.add(per, record[field_map['date']], record[field_map['visitors']].to_i)
+              #   @logger.info(record)
+              # end
+            end
+          end
+        end
+      end
+
+      do_dw_request(url, map_function)
+    end
+
+    def get_dw_request_inc(url, map_function)
+      
+      do_dw_request(url, map_function)
+    end
+
+    def do_dw_request(url, map_function=lambda {|record| puts record})
+      generate_nonce
+      
+      log(Logger::INFO, "Created new nonce: #{@password}")
+      
+      request = HTTPI::Request.new
+
+      request.url = url
+      request.headers = request_headers
+
+      if @verify_mode
+        request.auth.ssl.verify_mode = @verify_mode
+      end
+
+      def parse_line(header, line)
+        line
+      end
+      def parse_header(header)
+        header
+      end
+
+      #to-do: replace with suitable CSV parser
+      def process_lines(header, lines, map_function)
+        if lines != ''
+          lines = lines.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, "")
+          if not header
+            start_point = lines.index(/\r?\n/)
+            if start_point
+              header = lines[0..start_point]
+              to_parse = lines[start_point..-1]
+            end
+          else
+            to_parse = lines
+          end
+
+          if header
+            data = CSV.parse(to_parse)
+            map_function.call(data)
+          end
+        end
+      end
+
+      i = 0
+      buffer = ''
+      header = false
+      should_process = true
+
+      #to-do: group chunks together for more efficient processing
+      request.on_body do |chunk|
+        #chunk = chunk.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, "")
+
+        last_new_line = chunk.rindex(/\r?\n/) || -1
+        buffer << chunk[0..last_new_line]
+        if should_process
+          process_lines(header, buffer, map_function)
+          buffer = chunk[last_new_line..-1]
+        end
+        i+=1
+      end
+
+      #do remaining buffer
+      process_lines(header, buffer, map_function)
+
+      response = HTTPI.post(request)
+
+      if response.code >= 400
+        log(Logger::ERROR, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+        raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
+      end
+
+      log(Logger::INFO, "Server responded with response code #{response.code}.")
+
     end
     
     attr_writer :log
@@ -119,29 +254,52 @@ module ROmniture
     end
 
     ##
-    # Removes some ugliness from the Adobe response.
+    # Converts Adobe "csv" response into a correctly decoded unicode CSV.
     #
     def self.clean_dw_response(body)
       body.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, "")
     end
 
     ##
-    # Parses the Data Warehouse CSV file into final format
+    # Parses the Data Warehouse CSV file into a list of dictionaries.
+    # 
+    # param: csv. str. Properly formatted CSV as a string.
+    # returns: generator of dictionaries. The CSV record.
     #
-    def self.parse_dw_csv(clean_body)
-      parsed = CSV.parse(clean_body)
+    def self.parse_dw_csv(csv)
+      records = []
+      parsed = CSV.parse(csv)
+      # if parsed.length > 2
+      #   headers = parsed.shift
+      #   parsed.each do |row|
+      #     record = {}
+      #     row.each_with_index do |field_num, field_value|
+      #       field_name = headers[field_num]
+      #       record[field_name] = field_value
+      #     end
+      #     yield row
+      #   end
+      # end
       parsed
     end
 
-    def do_dw_request(url)
+    
+
+    def send_insert_request(data)
       generate_nonce
       
       log(Logger::INFO, "Created new nonce: #{@password}")
       
       request = HTTPI::Request.new
 
-      request.url = url
+      data['scXmlVer'] = "1.0"
+
+      xml = data.to_xml(:root => 'request')
+
+      request.url = @insert_url
       request.headers = request_headers
+      request.headers['Content-Length'] = xml.length.to_s
+      request.body = xml
 
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
@@ -150,7 +308,7 @@ module ROmniture
       response = HTTPI.post(request)
 
       if response.code >= 400
-        log(:error, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+        log(Logger::ERROR, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
 
@@ -178,7 +336,7 @@ module ROmniture
       response = HTTPI.post(request)
       
       if response.code >= 400
-        log(:error, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+        log(Logger::ERROR, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
       
@@ -189,7 +347,7 @@ module ROmniture
     
     def generate_nonce
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
-      @created        = Time.now.strftime("%Y-%m-%dT%H:%M:%SZ")
+      @created        = Time.now.strftime("%Y-%m-%d %H:%M:%S")
       combined_string = @nonce + @created + @shared_secret
       sha1_string     = Digest::SHA1.new.hexdigest(combined_string)
       @password       = Base64.encode64(sha1_string).to_s.chomp("\n")
@@ -227,7 +385,7 @@ module ROmniture
       
       if error
         msg = "Unable to get data for report #{report_id}.  Status: #{status}.  Error Code: #{json["error_code"]}.  #{json["error_msg"]}."
-        log(:error, msg)
+        log(Logger::ERROR, msg)
         raise ROmniture::Exceptions::OmnitureReportException.new(json), msg
       end
             

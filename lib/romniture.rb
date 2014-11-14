@@ -11,6 +11,12 @@ require "digest/md5"
 require "digest/sha1"
 require "base64"
 require "json"
+require "active_support/core_ext"
+
+require "curb"
+require "pry"
+require "stringio"
+require 'open-uri'
 
 module ROmniture
   
