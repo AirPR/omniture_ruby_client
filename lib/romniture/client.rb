@@ -83,7 +83,7 @@ module ROmniture
       end
     end
 
-    def get_dw_result(url, map_function)
+    def get_dw_result(url, &block)
       generate_nonce
       
       log(Logger::INFO, "Created new nonce: #{@password}")
@@ -97,7 +97,7 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
 
-      ROmniture::DWResponse.new(request, map_function)
+      ROmniture::DWResponse.new(request, block)
     end
     
     attr_writer :log
