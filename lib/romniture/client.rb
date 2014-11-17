@@ -83,43 +83,7 @@ module ROmniture
       end
     end
 
-    def get_dw_result(url)
-      # map_function = lambda do |records|
-      #   puts "[recordset]"
-      #   records.each do |record|
-      #     log(Logger::INFO,record)
-      #   end
-      #   puts "[/recordset]"
-      # end
-
-      map_function = lambda do |records|
-        @logger.info("[recordset]")
-        records.each do |record|
-          @logger.info(record)
-          if record.length
-            url = record[1]
-            if url != nil
-              #puts record
-              puts url
-              # per = get_per_from_url(url)
-              # if per.present?
-              #   data_store.add(per, record[field_map['date']], record[field_map['visitors']].to_i)
-              #   @logger.info(record)
-              # end
-            end
-          end
-        end
-      end
-
-      do_dw_request(url, map_function)
-    end
-
-    def get_dw_request_inc(url, map_function)
-      
-      do_dw_request(url, map_function)
-    end
-
-    def do_dw_request(url, map_function=lambda {|record| puts record})
+    def get_dw_result(url, map_function)
       generate_nonce
       
       log(Logger::INFO, "Created new nonce: #{@password}")
@@ -133,64 +97,7 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
 
-      def parse_line(header, line)
-        line
-      end
-      def parse_header(header)
-        header
-      end
-
-      #to-do: replace with suitable CSV parser
-      def process_lines(header, lines, map_function)
-        if lines != ''
-          lines = lines.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, "")
-          if not header
-            start_point = lines.index(/\r?\n/)
-            if start_point
-              header = lines[0..start_point]
-              to_parse = lines[start_point..-1]
-            end
-          else
-            to_parse = lines
-          end
-
-          if header
-            data = CSV.parse(to_parse)
-            map_function.call(data)
-          end
-        end
-      end
-
-      i = 0
-      buffer = ''
-      header = false
-      should_process = true
-
-      #to-do: group chunks together for more efficient processing
-      request.on_body do |chunk|
-        #chunk = chunk.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, "")
-
-        last_new_line = chunk.rindex(/\r?\n/) || -1
-        buffer << chunk[0..last_new_line]
-        if should_process
-          process_lines(header, buffer, map_function)
-          buffer = chunk[last_new_line..-1]
-        end
-        i+=1
-      end
-
-      #do remaining buffer
-      process_lines(header, buffer, map_function)
-
-      response = HTTPI.post(request)
-
-      if response.code >= 400
-        log(Logger::ERROR, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
-        raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
-      end
-
-      log(Logger::INFO, "Server responded with response code #{response.code}.")
-
+      ROmniture::DWResponse.new(request, map_function)
     end
     
     attr_writer :log
@@ -282,8 +189,6 @@ module ROmniture
       # end
       parsed
     end
-
-    
 
     def send_insert_request(data)
       generate_nonce
