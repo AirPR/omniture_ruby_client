@@ -2,6 +2,7 @@ require "romniture/version"
 require "romniture/client"
 require "romniture/exceptions"
 require "romniture/visitorid"
+require "romniture/dwresponse"
 
 require "rubygems"
 
@@ -11,6 +12,12 @@ require "digest/md5"
 require "digest/sha1"
 require "base64"
 require "json"
+require "active_support/core_ext"
+
+require "curb"
+require "pry"
+require "stringio"
+require 'open-uri'
 
 module ROmniture
   

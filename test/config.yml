@@ -35,3 +35,35 @@ visitor_id:
     -
       hex: "5C2EEC31F9C9517E-36D0A36E5479E9DA"
       dec: "5293314873480339452_4536271369862149461"
+data_insert:
+  good:
+    -
+      reportSuiteID: airprptnrdev
+      visitorID: "6642506199806333310_3949836567462930906"
+      ipAddress: 127.0.0.1
+      userAgent: >
+        Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 4.0),
+        Mozilla/5.0 (Macintosh; U; Intel Mac OS X; es-ES; rv:1.8.1.6)
+        Gecko/20070725 Firefox/2.0.0.6
+      pageName: Product Detail Page**
+      linkName: Call Center Link**
+      linkType: o
+      linkURL:  true
+      events:   event1
+      transactionID: 003456
+      timestamp: 2013-11-17T17:33:22-07
+    -
+      reportSuiteID: airprptnrdev
+      visitorID: "5293314873480339452_4536271369862149461"
+      ipAddress: 127.0.0.1
+      userAgent: >
+        Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 4.0),
+        Mozilla/5.0 (Macintosh; U; Intel Mac OS X; es-ES; rv:1.8.1.6)
+        Gecko/20070725 Firefox/2.0.0.6
+      pageName: Product Detail Page**
+      linkName: Call Center Link**
+      linkType: o
+      linkURL:  true
+      events:   event1
+      transactionID: 003456
+      timestamp: 2013-11-17T17:33:22-07
