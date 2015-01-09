@@ -89,7 +89,7 @@ module ROmniture
         end
 
         if @header
-          data = CSV.parse(to_parse)
+          data = CSV.parse(@header + to_parse, :headers => true)
           @map_function.call(data)
         end
       end
