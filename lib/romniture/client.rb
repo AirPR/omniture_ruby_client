@@ -23,7 +23,8 @@ module ROmniture
       @wait_time      = options[:wait_time] ? options[:wait_time] : DEFAULT_REPORT_WAIT_TIME
       @log            = options[:log] ? options[:log] : false
       @verify_mode    = options[:verify_mode] ? options[:verify_mode] : false
-      @insert_url     = "https://airpr.d1.sc.omtrdc.net/b/ss/airprptnrdev/6/"
+      #@insert_url     = "https://airpr.d1.sc.omtrdc.net/b/ss/airprptnrdev/6/"
+      @insert_url     = ''
       HTTPI.log       = true
     end
 
@@ -33,8 +34,10 @@ module ROmniture
       begin
         JSON.parse(response.body)
       rescue JSON::ParserError => pe
+        log(Logger::ERROR, pe)
         response.body
       rescue Exception => e
+        log(Logger::ERROR, e)
         log(Logger::ERROR, "Error in request response:\n#{response.body}")
         raise "Error in request response:\n#{response.body}"
       end
@@ -82,6 +85,21 @@ module ROmniture
         raise "Could not queue report.  Omniture returned with error:\n#{response.body}"
       end
     end
+
+    # Gets and processes CSV result from Data Warehouse.
+    # 
+    # Designed to be used in a block. 
+    # Returns a set of records for each iteratively processed chunk of body.
+    # 
+    # Example:
+    #
+    # client.get_dw_result(data_url) do |records|
+    #   @logger.info("[recordset]")
+    #   records.each do |record|
+    #      @logger.info(record)
+    #   end
+    #   @logger.info("[/recordset]")
+    # end
 
     def get_dw_result(url, &block)
       generate_nonce
@@ -168,14 +186,15 @@ module ROmniture
     end
 
     ##
-    # Parses the Data Warehouse CSV file into a list of dictionaries.
+    # Parses the Data Warehouse CSV file into a list.
     # 
     # param: csv. str. Properly formatted CSV as a string.
-    # returns: generator of dictionaries. The CSV record.
+    # returns: array.
     #
     def self.parse_dw_csv(csv)
-      records = []
-      parsed = CSV.parse(csv)
+      CSV.parse(csv)
+
+      # ### Alternative parsing method below:
       # if parsed.length > 2
       #   headers = parsed.shift
       #   parsed.each do |row|
@@ -187,7 +206,7 @@ module ROmniture
       #     yield row
       #   end
       # end
-      parsed
+      # parsed
     end
 
     def send_insert_request(data)
