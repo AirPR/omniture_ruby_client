@@ -18,6 +18,7 @@ require "curb"
 require "pry"
 require "stringio"
 require 'open-uri'
+require 'csv'
 
 module ROmniture
   

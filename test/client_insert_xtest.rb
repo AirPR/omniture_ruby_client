@@ -1,12 +1,12 @@
 require 'rubygems'
-require 'test/unit'
+require 'minitest/autorun'
 require 'yaml'
 #require 'pry'
 
 $:.unshift File.expand_path('../../lib', __FILE__)
 require 'romniture'
 
-class ClientInsertTest < Test::Unit::TestCase
+class ClientInsertTest < Minitest::Test
 
   def setup
     config = YAML::load(File.open("test/config.yml"))
