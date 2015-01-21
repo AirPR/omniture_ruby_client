@@ -15,6 +15,8 @@ module ROmniture
     #     the prepared report.
     # param map_function. function. The function to apply to each record.
 
+    class MaxConsecutiveMalformedCSVExceeded < StandardError; end
+
     def initialize(request=nil, map_function=nil)
       @logger = Logger.new(STDOUT)
       @logger.level = Logger::INFO
@@ -131,7 +133,6 @@ module ROmniture
         to_parse = @header.clone.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, "")
         to_parse += @buffer.clone.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, "")
         begin
-          puts "[to_parse]: #{to_parse} [/to_parse]"
           data = CSV.parse(to_parse, :headers => true, skip_blanks: true)
           if !data.empty?
             @map_function.call(data)
@@ -141,9 +142,8 @@ module ROmniture
         rescue CSV::MalformedCSVError
           @consecutive_malformed += 1
           success = false
-          puts "malformed!"
           if @consecutive_malformed > MAX_CONSECUTIVE_MALFORMED
-            raise "Too many consecutive malformed CSV errors"
+            raise MaxConsecutiveMalformedCSVExceeded
           end
         end
       end
