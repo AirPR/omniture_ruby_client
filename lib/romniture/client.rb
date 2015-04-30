@@ -271,7 +271,7 @@ module ROmniture
     
     def generate_nonce
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
-      @created        = Time.now.strftime("%Y-%m-%d %H:%M:%S")
+      @created        = Time.now.strftime("%Y-%m-%d %H:%M:%SZ")
       combined_string = @nonce + @created + @shared_secret
       sha1_string     = Digest::SHA1.new.hexdigest(combined_string)
       @password       = Base64.encode64(sha1_string).to_s.chomp("\n")
