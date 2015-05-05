@@ -5,20 +5,13 @@ module ROmniture
   class Client
 
     DEFAULT_REPORT_WAIT_TIME = 0.25
-    
-    ENVIRONMENTS = {
-      :san_jose       => "https://api.omniture.com/admin/1.3/rest/",
-      :dallas         => "https://api2.omniture.com/admin/1.3/rest/",
-      :london         => "https://api3.omniture.com/admin/1.3/rest/",
-      :san_jose_beta  => "https://beta-api.omniture.com/admin/1.3/rest/",
-      :dallas_beta    => "https://beta-api2.omniture.com/admin/1.3/rest/",
-      :sandbox        => "https://api-sbx1.omniture.com/admin/1.3/rest/"
-    }
+    DEFAULT_API_VERSION = "1.3"
     
     def initialize(username, shared_secret, environment, options={})
       @username       = username
       @shared_secret  = shared_secret
-      @environment    = environment.is_a?(Symbol) ? ENVIRONMENTS[environment] : environment.to_s
+      @api_version    = options[:api_version] ? options[:api_version] : DEFAULT_API_VERSION
+      @environment    = environment.is_a?(Symbol) ? environments[environment] : environment.to_s
 
       @wait_time      = options[:wait_time] ? options[:wait_time] : DEFAULT_REPORT_WAIT_TIME
       @log            = options[:log] ? options[:log] : false
@@ -26,6 +19,17 @@ module ROmniture
       #@insert_url     = "https://airpr.d1.sc.omtrdc.net/b/ss/airprptnrdev/6/"
       @insert_url     = ''
       HTTPI.log       = true
+    end
+
+    def environments
+      {
+        :san_jose       => "https://api.omniture.com/admin/#{@api_version}/rest/",
+        :dallas         => "https://api2.omniture.com/admin/#{@api_version}/rest/",
+        :london         => "https://api3.omniture.com/admin/#{@api_version}/rest/",
+        :san_jose_beta  => "https://beta-api.omniture.com/admin/#{@api_version}/rest/",
+        :dallas_beta    => "https://beta-api2.omniture.com/admin/#{@api_version}/rest/",
+        :sandbox        => "https://api-sbx1.omniture.com/admin/#{@api_version}/rest/"
+      }
     end
 
     def request(method, parameters = {})
