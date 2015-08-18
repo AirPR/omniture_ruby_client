@@ -117,6 +117,33 @@ module ROmniture
 
       ROmniture::DWResponse.new(request, block)
     end
+
+    def get_result_as_gzip_str(url, &block)
+      generate_nonce
+      request = HTTPI::Request.new
+      request.url = url
+      request.headers = request_headers
+      if @verify_mode
+        request.auth.ssl.verify_mode = @verify_mode
+      end
+      wio = StringIO.new("w")
+      w_gz = Zlib::GzipWriter.new(wio)
+
+      request.on_body do |chunk|
+        if not chunk.nil? and chunk.length
+          # Omniture has weird encoding issues
+          w_gz.write(chunk.clone.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, ""))
+        end
+      end
+      response = HTTPI.post(request)
+      if response.code >= 400
+        @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+        w_gz.close
+        raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
+      end
+      w_gz.close
+      wio.string
+    end
     
     attr_writer :log
     
