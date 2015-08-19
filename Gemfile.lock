@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    romniture (0.0.7)
+    romniture (0.0.12)
       activesupport
       builder
       curb
