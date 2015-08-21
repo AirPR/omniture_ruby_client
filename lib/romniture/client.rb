@@ -127,21 +127,24 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
       wio = StringIO.new("w")
-      w_gz = Zlib::GzipWriter.new(wio)
+      begin
+        w_gz = Zlib::GzipWriter.new(wio)
 
-      request.on_body do |chunk|
-        if not chunk.nil? and chunk.length
-          # Omniture has weird encoding issues
-          w_gz.write(chunk.clone.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, ""))
+        request.on_body do |chunk|
+          if not chunk.nil? and chunk.length
+            # Omniture has weird encoding issues
+            w_gz.write(chunk.clone.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, ""))
+          end
         end
-      end
-      response = HTTPI.post(request)
-      if response.code >= 400
-        @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+        response = HTTPI.post(request)
+        if response.code >= 400
+          @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+          w_gz.close
+          raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
+        end
+      ensure
         w_gz.close
-        raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
-      w_gz.close
       wio.string
     end
     
