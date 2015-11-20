@@ -142,7 +142,7 @@ module ROmniture
         end
         response = HTTPI.post(request)
         if response.code >= 400
-          @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+          logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
           w_gz.close
           raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
         end
@@ -305,7 +305,14 @@ module ROmniture
     
     def generate_nonce
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
-      @created        = Time.now.strftime("%Y-%m-%d %H:%M:%SZ")
+      case @api_version
+      when "1.3"
+        @created        = Time.now.strftime("%Y-%m-%d %H:%M:%SZ")
+      when "1.4"
+        tz_aware_local_date = Time.zone.now
+        utc_date            = tz_aware_local_date.utc
+        @created            = utc_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+      end
       combined_string = @nonce + @created + @shared_secret
       sha1_string     = Digest::SHA1.new.hexdigest(combined_string)
       @password       = Base64.encode64(sha1_string).to_s.chomp("\n")
