@@ -130,14 +130,12 @@ module ROmniture
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
-      wio = StringIO.new("w")
+      wio = StringIO.new("w:bom|utf-8")
       begin
         w_gz = Zlib::GzipWriter.new(wio)
-
         request.on_body do |chunk|
-          if not chunk.nil? and chunk.length
-            # Omniture has weird encoding issues
-            w_gz.write(chunk.clone.force_encoding("UTF-8").gsub(/\xEF\xBB\xBF/, ""))
+          if chunk
+            w_gz.write(chunk)
           end
         end
         response = HTTPI.post(request)
