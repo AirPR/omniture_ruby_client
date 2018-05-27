@@ -8,34 +8,29 @@ PATH
       httpi
       json
       minitest
-      pry
 
 GEM
   remote: http://rubygems.org/
   specs:
-    activesupport (4.1.7)
-      i18n (~> 0.6, >= 0.6.9)
-      json (~> 1.7, >= 1.7.7)
+    activesupport (5.2.0)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (>= 0.7, < 2)
       minitest (~> 5.1)
-      thread_safe (~> 0.1)
       tzinfo (~> 1.1)
-    builder (3.2.2)
-    coderay (1.1.0)
-    curb (0.8.6)
-    httpi (2.3.0)
+    builder (3.2.3)
+    concurrent-ruby (1.0.5)
+    curb (0.9.4)
+    httpi (2.4.3)
       rack
-    i18n (0.6.11)
-    json (1.8.1)
-    method_source (0.8.2)
-    minitest (5.4.3)
-    pry (0.10.1)
-      coderay (~> 1.1.0)
-      method_source (~> 0.8.1)
-      slop (~> 3.4)
-    rack (1.5.2)
-    slop (3.6.0)
-    thread_safe (0.3.4)
-    tzinfo (1.2.2)
+      socksify
+    i18n (1.0.1)
+      concurrent-ruby (~> 1.0)
+    json (2.1.0)
+    minitest (5.11.3)
+    rack (2.0.5)
+    socksify (1.7.1)
+    thread_safe (0.3.6)
+    tzinfo (1.2.5)
       thread_safe (~> 0.1)
 
 PLATFORMS
@@ -43,3 +38,6 @@ PLATFORMS
 
 DEPENDENCIES
   romniture!
+
+BUNDLED WITH
+   1.16.2

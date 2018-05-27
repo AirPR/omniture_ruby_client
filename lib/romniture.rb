@@ -15,7 +15,6 @@ require "json"
 require "active_support/core_ext"
 
 require "curb"
-require "pry"
 require "stringio"
 require 'open-uri'
 require 'csv'

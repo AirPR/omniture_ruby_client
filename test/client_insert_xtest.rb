@@ -1,7 +1,6 @@
 require 'rubygems'
 require 'minitest/autorun'
 require 'yaml'
-#require 'pry'
 
 $:.unshift File.expand_path('../../lib', __FILE__)
 require 'romniture'

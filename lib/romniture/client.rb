@@ -71,7 +71,6 @@ module ROmniture
 
       if status != "SUCCESS"
         raise "Insert did not succeed."
-        binding.pry
       end
 
       parsed
