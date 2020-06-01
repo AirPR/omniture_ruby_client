@@ -6,6 +6,7 @@ module ROmniture
 
     DEFAULT_REPORT_WAIT_TIME = 0.25
     DEFAULT_API_VERSION = "1.3"
+    REPORT_ID = "reportID"
     
     def initialize(username, shared_secret, environment, options={})
       @username       = username
@@ -117,14 +118,21 @@ module ROmniture
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
-
-      ROmniture::DWResponse.new(request, block)
+      if request.url == 'Report.Get'
+        request.body = {REPORT_ID => url[REPORT_ID],:page => 1}
+        ROmniture::ReportResponse.new(request, block)
+      else
+        ROmniture::DWResponse.new(request, block)
+      end
     end
 
     def get_result_as_gzip_str(url, &block)
       generate_nonce
       request = HTTPI::Request.new
-      request.url = url
+      if url.key?(REPORT_ID)
+        request.url = 'Report.Get'
+        request.body = {REPORT_ID=>url[REPORT_ID],:page => 1}
+      end
       request.headers = request_headers
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
