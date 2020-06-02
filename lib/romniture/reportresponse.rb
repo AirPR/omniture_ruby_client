@@ -29,7 +29,7 @@ module ROmniture
       @page_count = 1
       @header = false
       @csv_header = []
-      @csv_rows = []
+      @csv_rows = {}
       if !request.nil?
         download
         process_buffer
@@ -54,6 +54,7 @@ module ROmniture
         unless @csv_header.present?
           @csv_header << "Hour"
           breakdowns.each do |breakdown|
+            #TODO ignore breakdown=inside your site for internal references
             @csv_header << breakdown[:name]
           end
           metrics.each do |metric|
@@ -70,12 +71,13 @@ module ROmniture
           datetime = chunk[:name]
           value = [datetime]
           if chunk.key?(:breakdown)
-                 value = value + parse_breakdown(chunk[:breakdown],value)
+              value = value + (chunk[:name])
+              value = value + parse_breakdown(chunk[:breakdown],value)
           end
           if chunk.key?(:breakdown)
               value = value + chunk[:counts]
           end
-          @csv_rows << value.join(', ') #convert to CSV format
+          @csv_rows << value.join(",")
         end
       end
     end
@@ -106,7 +108,7 @@ module ROmniture
     def process_buffer
       success = false
       if !@csv_rows.empty?
-        data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true)
+        data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true) #TODO try to remove CSV parse and provide direct dicts
         if !data.empty?
           @map_function.call(data)
         end
