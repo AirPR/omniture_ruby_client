@@ -29,7 +29,7 @@ module ROmniture
       @page_count = 1
       @header = false
       @csv_header = []
-      @csv_rows = {}
+      @csv_rows = []
       if !request.nil?
         download
         process_buffer
