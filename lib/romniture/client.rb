@@ -119,7 +119,7 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
       if request.url == 'Report.Get'
-        request.body = {REPORT_ID => url[REPORT_ID],:page => 1}
+        request.body = {REPORT_ID => url['report'],:page => 1}
         ROmniture::ReportResponse.new(request, block)
       else
         ROmniture::DWResponse.new(request, block)
@@ -131,7 +131,7 @@ module ROmniture
       request = HTTPI::Request.new
       if url.key?(REPORT_ID)
         request.url = 'Report.Get'
-        request.body = {REPORT_ID=>url[REPORT_ID],:page => 1}
+        request.body = {REPORT_ID=>url['report'],:page => 1}
       end
       request.headers = request_headers
       if @verify_mode
