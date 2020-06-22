@@ -89,6 +89,7 @@ module ROmniture
     def download
       response = HTTPI.post(@request)
 
+      @logger.info("report download for #{@request.body} #{response.code}\n\n#{response.body}")
       if response.code >= 400
         @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 

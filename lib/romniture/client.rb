@@ -37,6 +37,7 @@ module ROmniture
       response = send_request(method, parameters)
 
       begin
+        log(Logger::INFO, "request method #{method} #{response.status} : #{response.body} ")
         JSON.parse(response.body)
       rescue JSON::ParserError => pe
         log(Logger::ERROR, pe)
@@ -108,7 +109,7 @@ module ROmniture
     def get_dw_result(url, &block)
       generate_nonce
       
-      log(Logger::INFO, "Created new nonce: #{@password}")
+      log(Logger::INFO, "Created new nonce: #{@password} for #{url}")
       
       request = HTTPI::Request.new
 
@@ -118,8 +119,11 @@ module ROmniture
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
-      if request.url == 'Report.Get'
-        request.body = {REPORT_ID => url['report'],:page => 1}
+      report = url.split("report_id")
+
+      if report.size>1
+        request.url = "Report.Get"
+        request.body = {REPORT_ID => report[1],:page => 1}
         ROmniture::ReportResponse.new(request, block)
       else
         ROmniture::DWResponse.new(request, block)
@@ -128,10 +132,12 @@ module ROmniture
 
     def get_result_as_gzip_str(url, &block)
       generate_nonce
+      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url}")
       request = HTTPI::Request.new
-      if url.key?(REPORT_ID)
+      report = url.split("report_id")
+      if report.size>1
         request.url = 'Report.Get'
-        request.body = {REPORT_ID=>url['report'],:page => 1}
+        request.body = {REPORT_ID=>report[1],:page => 1}
       end
       request.headers = request_headers
       if @verify_mode
@@ -146,6 +152,7 @@ module ROmniture
           end
         end
         response = HTTPI.post(request)
+        log(Logger::INFO, "get_result_as_gzip_str #{response.code} #{response.body}")
         if response.code >= 400
           logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
           w_gz.close
@@ -306,6 +313,7 @@ module ROmniture
       log(Logger::INFO, "Server responded with response code #{response.code}.")
       
       response
+      log(Logger::INFO, "Server responded with response code #{response.code} #{response.}")
     end
     
     def generate_nonce
