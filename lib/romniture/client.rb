@@ -112,20 +112,20 @@ module ROmniture
       
       request = HTTPI::Request.new
 
-      request.url = url
+      request.url = ''
       request.headers = request_headers
 
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
-      report = url.split("report_id")
 
-      if report.size>1
-        request.url = "Report.Get"
-        request.body = {REPORT_ID => report[1],:page => 1}
-        ROmniture::ReportResponse.new(request, block)
-      else
+      if url.is_a?(String)
+        request.url = url
         ROmniture::DWResponse.new(request, block)
+      else
+        request.url = "Report.Get"
+        request.body = {REPORT_ID => url['reportID'],:page => 1}
+        ROmniture::ReportResponse.new(request, block)
       end
     end
 
@@ -133,10 +133,11 @@ module ROmniture
       generate_nonce
       log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url}")
       request = HTTPI::Request.new
-      report = url.split("report_id")
-      if report.size>1
+      if url.is_a?(String)
+        request.url = url
+      else
         request.url = 'Report.Get'
-        request.body = {REPORT_ID=>report[1],:page => 1}
+        request.body = {REPORT_ID=>url['reportID'],:page => 1}
       end
       request.headers = request_headers
       if @verify_mode
