@@ -13,7 +13,6 @@ module ROmniture
       @shared_secret  = shared_secret
       @api_version    = options[:api_version] ? options[:api_version] : DEFAULT_API_VERSION
       @environment    = environment.is_a?(Symbol) ? environments[environment] : environment.to_s
-
       @wait_time      = options[:wait_time] ? options[:wait_time] : DEFAULT_REPORT_WAIT_TIME
       @log            = options[:log] ? options[:log] : false
       @verify_mode    = options[:verify_mode] ? options[:verify_mode] : false
@@ -77,7 +76,7 @@ module ROmniture
 
       parsed
     end
-    
+
     def get_report(method, report_description)      
       response = send_request(method, report_description)
       
@@ -305,7 +304,7 @@ module ROmniture
 
       response = HTTPI.post(request)
       
-      if response.code >= 400
+      if response.code >= 400 and @version=='1.3'
         log(Logger::ERROR, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
