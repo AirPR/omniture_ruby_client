@@ -112,7 +112,6 @@ module ROmniture
       
       request = HTTPI::Request.new
 
-      request.url = ''
       request.headers = request_headers
 
       if @verify_mode
@@ -123,6 +122,7 @@ module ROmniture
         request.url = url
         ROmniture::DWResponse.new(request, block)
       else
+        log(Logger::INFO,@environment + "?method=Report.Get")
         request.url = @environment + "?method=Report.Get"
         log(Logger::INFO, request.url)
         request.body = {REPORT_ID => url['reportID'],:page => 1}
