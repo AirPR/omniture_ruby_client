@@ -119,11 +119,12 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
 
+
       if url.is_a?(String)
         request.url = url
         ROmniture::DWResponse.new(request, block)
       else
-        request.url = "Report.Get"
+        request.url = @environment + "?method=Report.Get"
         request.body = {REPORT_ID => url['reportID'],:page => 1}
         ROmniture::ReportResponse.new(request, block)
       end
@@ -136,7 +137,7 @@ module ROmniture
       if url.is_a?(String)
         request.url = url
       else
-        request.url = 'Report.Get'
+        request.url = @environment + "?method=Report.Get"
         request.body = {REPORT_ID=>url['reportID'],:page => 1}
       end
       request.headers = request_headers
