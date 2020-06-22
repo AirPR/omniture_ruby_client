@@ -108,7 +108,7 @@ module ROmniture
     def get_dw_result(url, &block)
       generate_nonce
       
-      log(Logger::INFO, "Created new nonce: #{@password} for #{url}")
+      log(Logger::INFO, "get_dw_result Created new nonce: #{@password} for #{url} : #{url.is_a?(String)}")
       
       request = HTTPI::Request.new
 
@@ -119,12 +119,12 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
 
-
       if url.is_a?(String)
         request.url = url
         ROmniture::DWResponse.new(request, block)
       else
         request.url = @environment + "?method=Report.Get"
+        log(Logger::INFO, request.url)
         request.body = {REPORT_ID => url['reportID'],:page => 1}
         ROmniture::ReportResponse.new(request, block)
       end
@@ -132,12 +132,13 @@ module ROmniture
 
     def get_result_as_gzip_str(url, &block)
       generate_nonce
-      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url}")
+      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url} : #{url.is_a?(String)}")
       request = HTTPI::Request.new
       if url.is_a?(String)
         request.url = url
       else
         request.url = @environment + "?method=Report.Get"
+        log(Logger::INFO, request.url)
         request.body = {REPORT_ID=>url['reportID'],:page => 1}
       end
       request.headers = request_headers
