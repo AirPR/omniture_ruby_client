@@ -310,10 +310,9 @@ module ROmniture
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
       
-      log(Logger::INFO, "Server responded with response code #{response.code}.")
-      
+      log(Logger::INFO, "Server responded with response code #{response.code}. \n\n#{response.body}")
       response
-      log(Logger::INFO, "Server responded with response code #{response.code} #{response.}")
+
     end
     
     def generate_nonce
