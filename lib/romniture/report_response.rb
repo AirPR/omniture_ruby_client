@@ -38,17 +38,21 @@ module ROmniture
       end
     end
 
-    def parse_breakdown(breakdown,value)
-      breakdown.each do |chunk|
-        value = value + [chunk["name"]]
-        if chunk.key?("breakdown")
-          value = value + parse_breakdown(chunk["breakdown"],value)
-        end
-        if chunk.key?("counts")
-          value = value + [chunk["counts"]]
+    def parse_breakdown(chunk,value)
+      value = value + [chunk["name"]]
+      breakdowns =  chunk["breakdown"]
+      counts = chunk["counts"]
+      if counts.present?
+        s = value.join(",") +","+ counts.join(",")
+        @csv_rows << s
+        value.pop
+        return
+      end
+      if breakdowns.present?
+        breakdowns.each do |breakdown|
+          parse_breakdown(breakdown,value)
         end
       end
-      value
     end
 
     def process_chunk(response)
@@ -74,18 +78,11 @@ module ROmniture
         end
         @csv_rows << @csv_header.join(",")
       end
+      @logger.info("Header rows : #{@csv_header}")
+      @logger.info("CSV rows : #{@csv_rows}")
+      value = []
       data.each  do |chunk|
-        datetime = chunk["name"]
-        value = [datetime]
-        if chunk.key?("breakdown")
-          value = value + [chunk["name"]]
-          value = parse_breakdown(chunk["breakdown"],value)
-        end
-        if chunk.key?("counts")
-          value = value + [chunk["counts"]]
-        end
-        @logger.info("value #{value}")
-        @csv_rows << value.join(",")
+        parse_breakdown(chunk,value)
       end
       @page_count += 1
     end
