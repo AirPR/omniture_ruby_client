@@ -61,7 +61,7 @@ module ROmniture
             @csv_header << breakdown["name"]
           end
           metrics.each do |metric|
-            matches = /(event[0-9]+)/.match(metric["id]") #custom event similar to csv
+            matches = /(event[0-9]+)/.match(metric["id"]) #custom event similar to csv
             if matches and matches.length
               @csv_header << "(#{matches[1]})"
             else
