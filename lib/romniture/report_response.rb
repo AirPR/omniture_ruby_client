@@ -49,37 +49,36 @@ module ROmniture
     end
 
     def process_chunk(response)
-      @logger.info("Server responded with response total pages #{response[:totalPages]}.")
-      @logger.info("Server responded with response total pages #{response[:totalPages]}.")
-      if response[:totalPages] < @page_count
-        data = response[:response][:report][:data]
-        metrics = response[:response][:report][:metrics]
-        breakdowns = response[:response][:report][:elements]
+      @logger.info("Server responded with response total pages #{response["totalPages"]}.")
+      if response["totalPages"] < @page_count
+        data = response["data"]
+        metrics = response["metrics"]
+        breakdowns = response["elements"]
         unless @csv_header.present?
           @csv_header << "Hour"
           breakdowns.each do |breakdown|
             #TODO ignore breakdown=inside your site for internal references
-            @csv_header << breakdown[:name]
+            @csv_header << breakdown["name"]
           end
           metrics.each do |metric|
-            matches = /(event[0-9]+)/.match(metric[:id]) #custom event similar to csv
+            matches = /(event[0-9]+)/.match(metric["id]") #custom event similar to csv
             if matches and matches.length
               @csv_header << "(#{matches[1]})"
             else
-              @csv_header << metric[:name]
+              @csv_header << metric["name"]
             end
           end
           @csv_rows << @csv_header.join(",")
         end
         data.each  do |chunk|
-          datetime = chunk[:name]
+          datetime = chunk["name"]
           value = [datetime]
-          if chunk.key?(:breakdown)
-              value = value + (chunk[:name])
-              value = value + parse_breakdown(chunk[:breakdown],value)
+          if chunk.key?("breakdown")
+              value = value + (chunk["name"])
+              value = value + parse_breakdown(chunk["breakdown"],value)
           end
-          if chunk.key?(:breakdown)
-              value = value + chunk[:counts]
+          if chunk.key?("breakdown")
+              value = value + chunk["counts"]
           end
           @csv_rows << value.join(",")
         end
@@ -119,10 +118,10 @@ module ROmniture
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
 
-      result = JSON.parse(response.body)[:report]
+      result = JSON.parse(response.body)["report"]
       process_chunk(result)
-      if result[:totalPages] > @page_count
-        @request.body = {:reportID => body[:reportID],:page => @page_count+1}
+      if result["totalPages"] > @page_count
+        @request.body = {:reportID => body["reportID"],:page => @page_count+1}
         download
       end
     end
