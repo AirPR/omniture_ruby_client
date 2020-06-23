@@ -50,40 +50,38 @@ module ROmniture
 
     def process_chunk(response)
       @logger.info("Server responded with response total pages #{response["totalPages"]}.")
-      if response["totalPages"] < @page_count
-        data = response["data"]
-        metrics = response["metrics"]
-        breakdowns = response["elements"]
-        @logger.info("Header rows : #{@csv_header}")
-        @logger.info("CSV rows : #{@csv_rows}")
-        unless @csv_header.present?
-          @csv_header << "Hour"
-          breakdowns.each do |breakdown|
-            #TODO ignore breakdown=inside your site for internal references
-            @csv_header << breakdown["name"]
-          end
-          metrics.each do |metric|
-            matches = /(event[0-9]+)/.match(metric["id"]) #custom event similar to csv
-            if matches and matches.length
-              @csv_header << "(#{matches[1]})"
-            else
-              @csv_header << metric["name"]
-            end
-          end
-          @csv_rows << @csv_header.join(",")
+      data = response["data"]
+      metrics = response["metrics"]
+      breakdowns = response["elements"]
+      @logger.info("Header rows : #{@csv_header}")
+      @logger.info("CSV rows : #{@csv_rows}")
+      unless @csv_header.present?
+        @csv_header << "Hour"
+        breakdowns.each do |breakdown|
+          #TODO ignore breakdown=inside your site for internal references
+          @csv_header << breakdown["name"]
         end
-        data.each  do |chunk|
-          datetime = chunk["name"]
-          value = [datetime]
-          if chunk.key?("breakdown")
-              value = value + (chunk["name"])
-              value = value + parse_breakdown(chunk["breakdown"],value)
+        metrics.each do |metric|
+          matches = /(event[0-9]+)/.match(metric["id"]) #custom event similar to csv
+          if matches and matches.length
+            @csv_header << "(#{matches[1]})"
+          else
+            @csv_header << metric["name"]
           end
-          if chunk.key?("breakdown")
-              value = value + chunk["counts"]
-          end
-          @csv_rows << value.join(",")
         end
+        @csv_rows << @csv_header.join(",")
+      end
+      data.each  do |chunk|
+        datetime = chunk["name"]
+        value = [datetime]
+        if chunk.key?("breakdown")
+          value = value + (chunk["name"])
+          value = value + parse_breakdown(chunk["breakdown"],value)
+        end
+        if chunk.key?("breakdown")
+          value = value + chunk["counts"]
+        end
+        @csv_rows << value.join(",")
       end
       @page_count += 1
     end
