@@ -103,7 +103,6 @@ module ROmniture
       }
     end
 
-
     private
 
     # Initiates the download
@@ -121,8 +120,9 @@ module ROmniture
       result = JSON.parse(response.body)["report"]
       process_chunk(result)
       if result["totalPages"] > @page_count
-        @logger.info("reportID: #{@request.body["reportID"]} count: #{@page_count}")
-        @request.body = {"reportID" => @request.body["reportID"],"page" => @page_count}
+        body = JSON.parse(@request.body)
+        @logger.info("reportID: #{body["reportID"]} count: #{@page_count}")
+        @request.body = {"reportID" => body["reportID"],"page" => @page_count}.to_json
         download
       end
     end
