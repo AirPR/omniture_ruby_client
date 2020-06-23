@@ -9,9 +9,11 @@ module ROmniture
   class ReportResponse
 
 
-    def initialize(request=nil, map_function=nil)
+    def initialize(shared_secret=nil, user_name=nil, request=nil,map_function=nil)
       @logger = Logger.new(STDOUT)
       @logger.level = Logger::INFO
+      @shared_secret = shared_secret
+      @username = user_name
       @request = request
       # Simply print records if mapping function not provided.
       if map_function.nil?
@@ -30,7 +32,7 @@ module ROmniture
       @header = false
       @csv_header = []
       @csv_rows = []
-      if !request.nil?
+      if !@request.nil?
         download
         process_buffer
       end
@@ -47,6 +49,8 @@ module ROmniture
     end
 
     def process_chunk(response)
+      @logger.info("Server responded with response total pages #{response[:totalPages]}.")
+      @logger.info("Server responded with response total pages #{response[:totalPages]}.")
       if response[:totalPages] < @page_count
         data = response[:response][:report][:data]
         metrics = response[:response][:report][:metrics]
@@ -80,6 +84,24 @@ module ROmniture
           @csv_rows << value.join(",")
         end
       end
+      @page_count += 1
+    end
+
+    def generate_nonce
+      @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
+      tz_aware_local_date = Time.zone.now
+      utc_date            = tz_aware_local_date.utc
+      @created            = utc_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+      @combined_string = @nonce + @created + @shared_secret
+      @sha1_string     = Digest::SHA1.new.hexdigest(@combined_string)
+      @password       = Base64.encode64(@sha1_string).to_s.chomp("\n")
+    end
+
+    def request_headers
+      {
+          "X-WSSE" => "UsernameToken Username=\"#{@username}\", PasswordDigest=\"#{@password}\", Nonce=\"#{@nonce}\", Created=\"#{@created}\"",
+          'Content-Type' => 'application/json'   #Added by ROB on 2013-08-22 because the Adobe Social API seems to require this be set
+      }
     end
 
 
@@ -87,19 +109,19 @@ module ROmniture
 
     # Initiates the download
     def download
+      generate_nonce
+      @request.headers = request_headers
       response = HTTPI.post(@request)
 
-      @logger.info("report download for #{@request.body} #{response.code}\n\n#{response.body}")
+      @logger.info("report download for #{@request.body} #{response.code}")
       if response.code >= 400
         @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
 
-      @logger.info("Server responded with response code #{response.code}.")
-
-      process_chunk(JSON.parse(response.body))
-      @page_count += 1
-      if response[:totalPages] > @page_count
+      result = JSON.parse(response.body)
+      process_chunk(result)
+      if result[:totalPages] > @page_count
         @request.body = {:reportID => body[:reportID],:page => @page_count+1}
         download
       end
