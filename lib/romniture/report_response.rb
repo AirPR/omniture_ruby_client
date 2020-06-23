@@ -119,7 +119,7 @@ module ROmniture
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
 
-      result = JSON.parse(response.body)
+      result = JSON.parse(response.body)[:report]
       process_chunk(result)
       if result[:totalPages] > @page_count
         @request.body = {:reportID => body[:reportID],:page => @page_count+1}
