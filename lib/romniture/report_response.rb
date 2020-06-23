@@ -40,12 +40,12 @@ module ROmniture
 
     def parse_breakdown(breakdown,value)
       breakdown.each do |chunk|
-        value << chunk["name"]
+        value = value + [chunk["name"]]
         if chunk.key?("breakdown")
-          value << parse_breakdown(chunk["breakdown"],value)
+          value = value + parse_breakdown(chunk["breakdown"],value)
         end
         if chunk.key?("counts")
-          value << chunk["counts"]
+          value = value + [chunk["counts"]]
         end
       end
       value
@@ -78,12 +78,13 @@ module ROmniture
         datetime = chunk["name"]
         value = [datetime]
         if chunk.key?("breakdown")
-          value << chunk["name"]
-          value << parse_breakdown(chunk["breakdown"],value)
+          value = value + [chunk["name"]]
+          value = parse_breakdown(chunk["breakdown"],value)
         end
         if chunk.key?("counts")
-          value << chunk["counts"]
+          value = value + [chunk["counts"]]
         end
+        @logger.info("value #{value}")
         @csv_rows << value.join(",")
       end
       @page_count += 1
