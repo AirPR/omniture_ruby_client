@@ -40,9 +40,12 @@ module ROmniture
 
     def parse_breakdown(breakdown,value)
       breakdown.each do |chunk|
-        value = value + (chunk["name"])
+        value << chunk["name"]
         if chunk.key?("breakdown")
-          value = value + append(parse_breakdown(chunk["breakdown"],value))
+          value << parse_breakdown(chunk["breakdown"],value)
+        end
+        if chunk.key?("counts")
+          value << chunk["counts"]
         end
       end
       value
@@ -75,11 +78,11 @@ module ROmniture
         datetime = chunk["name"]
         value = [datetime]
         if chunk.key?("breakdown")
-          value = value + (chunk["name"])
-          value = value + parse_breakdown(chunk["breakdown"],value)
+          value << chunk["name"]
+          value << parse_breakdown(chunk["breakdown"],value)
         end
-        if chunk.key?("breakdown")
-          value = value + chunk["counts"]
+        if chunk.key?("counts")
+          value << chunk["counts"]
         end
         @csv_rows << value.join(",")
       end
