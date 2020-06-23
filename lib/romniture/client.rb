@@ -335,7 +335,7 @@ module ROmniture
 
     def request_headers 
       {
-        "X-WSSE" => "UsernameToken Username=\"#{username}\", PasswordDigest=\"#{password}\", Nonce=\"#{nonce}\", Created=\"#{created}\"",
+        "X-WSSE" => "UsernameToken Username=\"#{@username}\", PasswordDigest=\"#{@password}\", Nonce=\"#{@nonce}\", Created=\"#{@created}\"",
         'Content-Type' => 'application/json'   #Added by ROB on 2013-08-22 because the Adobe Social API seems to require this be set
       }
     end
