@@ -18,11 +18,7 @@ module ROmniture
       # Simply print records if mapping function not provided.
       if map_function.nil?
         @map_function = lambda do |records|
-          @logger.info("[recordset]")
-          records.each do |record|
-            @logger.info(record.to_hash)
-          end
-          @logger.info("[/recordset]")
+          @logger.info("[recordset] found")
         end
       else
         @map_function = map_function
@@ -64,25 +60,31 @@ module ROmniture
       @logger.info("CSV rows : #{@csv_rows}")
       unless @csv_header.present?
         @csv_header << "Hour"
-        breakdowns.each do |breakdown|
-          #TODO ignore breakdown=inside your site for internal references
-          @csv_header << breakdown["name"]
+        if breakdowns.present?
+          breakdowns.each do |breakdown|
+            #TODO ignore breakdown=inside your site for internal references
+            @csv_header << breakdown["name"]
+          end
         end
-        metrics.each do |metric|
-          matches = /(event[0-9]+)/.match(metric["id"]) #custom event similar to csv
-          if matches and matches.length
-            @csv_header << "(#{matches[1]})"
-          else
-            @csv_header << metric["name"]
+        if metrics.present?
+          metrics.each do |metric|
+            matches = /(event[0-9]+)/.match(metric["id"]) #custom event similar to csv
+            if matches and matches.length
+              @csv_header << "(#{matches[1]})"
+            else
+              @csv_header << metric["name"]
+            end
           end
         end
         @csv_rows << @csv_header.join(",")
       end
       @logger.info("Header rows : #{@csv_header}")
-      @logger.info("CSV rows : #{@csv_rows}")
+      @logger.info("CSV Header rows : #{@csv_rows}")
       value = []
-      data.each  do |chunk|
-        parse_breakdown(chunk,value)
+      if data.present?
+        data.each  do |chunk|
+          parse_breakdown(chunk,value)
+        end
       end
       @page_count += 1
     end
