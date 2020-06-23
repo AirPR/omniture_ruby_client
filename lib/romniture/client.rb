@@ -126,6 +126,7 @@ module ROmniture
         request.url = @environment + "?method=Report.Get"
         log(Logger::INFO, request.url)
         request.body = {REPORT_ID => url['reportID'],:page => 1}
+        log(Logger::INFO,"RRRespomse")
         ROmniture::ReportResponse.new(request, block)
       end
     end

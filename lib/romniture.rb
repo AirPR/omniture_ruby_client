@@ -3,7 +3,7 @@ require "romniture/client"
 require "romniture/exceptions"
 require "romniture/visitorid"
 require "romniture/dwresponse"
-
+require "romniture/report_response"
 require "rubygems"
 
 require "logger"
