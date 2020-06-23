@@ -121,7 +121,7 @@ module ROmniture
       result = JSON.parse(response.body)["report"]
       process_chunk(result)
       if result["totalPages"] > @page_count
-        @request.body = {:reportID => body["reportID"],:page => @page_count+1}
+        @request.body = {:reportID => @request.body[:reportID],:page => @page_count+1}
         download
       end
     end
