@@ -40,7 +40,6 @@ module ROmniture
       breakdowns =  chunk["breakdown"]
       counts = chunk["counts"]
       if counts.present?
-        @logger.info(counts)
         metric_counts = counts.each_with_index.map do |count, index|
           if @metric_types[index][:type]=="number" || @metric_types[index][:type]=="currency"
              @metric_types[index][:decimals]==0 ? count.to_i : count.to_f
@@ -83,13 +82,14 @@ module ROmniture
             else
               @csv_header << metric["name"]
             end
-            @metric_types << {"type": metric["type"], "decimal": metric["decimals"]}
+            @metric_types << {"type": metric["type"], "decimals": metric["decimals"]}
           end
         end
         @csv_rows << @csv_header.join(",")
       end
       @logger.info("Header rows : #{@csv_header}")
       @logger.info("CSV Header rows : #{@csv_rows}")
+      @logger.info("@metric_types #{@metric_types}")
       value = []
       if data.present?
         data.each  do |chunk|
