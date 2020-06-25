@@ -95,7 +95,7 @@ module ROmniture
             if chunk["name"].include?("Hour") #Update granularity in header as response doesn't include the report's granularity level type
               @csv_header[0]= "\"Hour\""
             else
-              @csv_header[0]= "\"Day\""
+              @csv_header[0]= "\"Date\""
             end
             @csv_rows << @csv_header.join(",")
           end
