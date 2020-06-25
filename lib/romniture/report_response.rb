@@ -40,7 +40,7 @@ module ROmniture
       breakdowns =  chunk["breakdown"]
       counts = chunk["counts"]
       if counts.present?
-        counts = counts.map do |index, count|
+        counts = counts.each_with_index.map do |count, index|
           if @metric_types[index]["type"]=="number" || @metric_types[index]["type"]=="currency"
             if @metric_types[index]["decimals"]==0 ? count.to_i : count.to_f
           else
