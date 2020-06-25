@@ -28,6 +28,7 @@ module ROmniture
       @header = false
       @csv_header = []
       @csv_rows = []
+      @metric_types=[]
       if !@request.nil?
         download
         process_buffer
@@ -39,6 +40,14 @@ module ROmniture
       breakdowns =  chunk["breakdown"]
       counts = chunk["counts"]
       if counts.present?
+        counts = counts.map do |index, count|
+          if @metric_types[index]["type"]=="number" || @metric_types[index]["type"]=="currency"
+            if @metric_types[index]["decimals"]==0 ? count.to_i : count.to_f
+          else
+            count
+          end
+          end
+        end
         s = value.join(",") +","+ counts.join(",")
         @csv_rows << s
         value.pop
@@ -70,10 +79,11 @@ module ROmniture
           metrics.each do |metric|
             matches = /(event[0-9]+)/.match(metric["id"]) #custom event similar to csv
             if matches and matches.length
-              @csv_header << "(#{matches[1]})"
+              @csv_header << "#{metric["name"]}(#{matches[1]})"
             else
               @csv_header << metric["name"]
             end
+            @metric_types << {"type": metric["type"], "decimal": metric["decimal"]}
           end
         end
         @csv_rows << @csv_header.join(",")
