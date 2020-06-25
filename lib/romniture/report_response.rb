@@ -36,7 +36,7 @@ module ROmniture
     end
 
     def parse_breakdown(chunk,value)
-      value = value + [chunk["name"]]
+      value = value + ["\"#{chunk["name"]}\""]
       breakdowns =  chunk["breakdown"]
       counts = chunk["counts"]
       if counts.present?
@@ -64,8 +64,6 @@ module ROmniture
       data = response["data"]
       metrics = response["metrics"]
       breakdowns = response["elements"]
-      @logger.info("Header rows : #{@csv_header}")
-      @logger.info("CSV rows : #{@csv_rows}")
       unless @csv_header.present?
         @csv_header << "Hour"
         if breakdowns.present?
@@ -86,10 +84,11 @@ module ROmniture
           end
         end
         @csv_rows << @csv_header.join(",")
+        @logger.info("Header rows : #{@csv_header}")
+        @logger.info("CSV Header rows : #{@csv_rows}")
+        @logger.info("@metric_types #{@metric_types}")
       end
-      @logger.info("Header rows : #{@csv_header}")
-      @logger.info("CSV Header rows : #{@csv_rows}")
-      @logger.info("@metric_types #{@metric_types}")
+
       value = []
       if data.present?
         data.each  do |chunk|
