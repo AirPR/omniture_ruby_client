@@ -40,7 +40,8 @@ module ROmniture
       breakdowns =  chunk["breakdown"]
       counts = chunk["counts"]
       if counts.present?
-        counts = counts.each_with_index.map do |count, index|
+        metric_counts = counts.each_with_index.map do |count, index|
+          @logger.debug(@metric_types[index]["type"])
           if @metric_types[index]["type"]=="number" || @metric_types[index]["type"]=="currency"
             if @metric_types[index]["decimals"]==0 ? count.to_i : count.to_f
           else
@@ -48,7 +49,8 @@ module ROmniture
           end
           end
         end
-        s = value.join(",") +","+ counts.join(",")
+        @logger.debug(metric_counts)
+        s = value.join(",") +","+ metric_counts.join(",")
         @csv_rows << s
         value.pop
         return
@@ -123,8 +125,8 @@ module ROmniture
       generate_nonce
       @request.headers = request_headers
       response = HTTPI.post(@request)
-
-      @logger.info("report download for #{@request.body} #{response.code}")
+      body = JSON.parse(@request.body)
+      @logger.info("report download for #{body} #{response.code}")
       if response.code >= 400
         @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
@@ -133,7 +135,6 @@ module ROmniture
       result = JSON.parse(response.body)["report"]
       process_chunk(result)
       if @page_count <= result["totalPages"]
-        body = JSON.parse(@request.body)
         @logger.info("reportID: #{body["reportID"]} count: #{@page_count}")
         @request.body = {"reportID" => body["reportID"],"page" => @page_count}.to_json
         download
