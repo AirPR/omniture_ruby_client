@@ -28,7 +28,7 @@ module ROmniture
       @header = false
       @csv_header = []
       @csv_rows = []
-      @metric_types=[]
+      @metric_types = []
       if !@request.nil?
         download
         process_buffer
@@ -40,13 +40,13 @@ module ROmniture
       breakdowns =  chunk["breakdown"]
       counts = chunk["counts"]
       if counts.present?
+        @logger.info(counts)
         metric_counts = counts.each_with_index.map do |count, index|
-          @logger.info("MEtric count Type : #{@metric_types[index]["type"]} for #{count}")
-          if @metric_types[index]["type"]=="number" || @metric_types[index]["type"]=="currency"
-            if @metric_types[index]["decimals"]==0 ? count.to_i : count.to_f
+          @logger.info("MEtric count Type :#{@metric_types[index]} #{@metric_types[index][:type]} #{@metric_types[index]["type"]} for #{count}")
+          if @metric_types[index][:type]=="number" || @metric_types[index][:type]=="currency"
+             @metric_types[index][:decimals]==0 ? count.to_i : count.to_f
           else
             count
-          end
           end
         end
         @logger.info("MEtric counts  : #{metric_counts}")
