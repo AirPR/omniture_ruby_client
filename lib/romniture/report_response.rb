@@ -64,26 +64,25 @@ module ROmniture
       data = response["data"]
       metrics = response["metrics"]
       breakdowns = response["elements"]
-      unless @csv_header.present?
-        @csv_header << "Hour"
+      if @csv_header.empty?
+        @csv_header << "\"Hour\""
         if breakdowns.present?
           breakdowns.each do |breakdown|
             #TODO ignore breakdown=inside your site for internal references
-            @csv_header << breakdown["name"]
+            @csv_header << "\"#{breakdown["name"]}\""
           end
         end
         if metrics.present?
           metrics.each do |metric|
             matches = /(event[0-9]+)/.match(metric["id"]) #custom event similar to csv
             if matches and matches.length
-              @csv_header << "#{metric["name"]}(#{matches[1]})"
+              @csv_header << "\"#{metric["name"]}(#{matches[1]})\""
             else
-              @csv_header << metric["name"]
+              @csv_header << "\"#{metric["name"]}\""
             end
             @metric_types << {"type": metric["type"], "decimals": metric["decimals"]}
           end
         end
-        @csv_rows << @csv_header.join(",")
         @logger.info("Header rows : #{@csv_header}")
         @logger.info("CSV Header rows : #{@csv_rows}")
         @logger.info("@metric_types #{@metric_types}")
@@ -92,8 +91,20 @@ module ROmniture
       value = []
       if data.present?
         data.each  do |chunk|
+          if @csv_rows.empty?
+            if chunk["name"].include?("Hour") #Update granularity in header as response doesn't include the report's granularity level type
+              @csv_header[0]= "\"Hour\""
+            else
+              @csv_header[0]= "\"Day\""
+            end
+            @csv_rows << @csv_header.join(",")
+          end
           parse_breakdown(chunk,value)
         end
+      end
+      if @csv_rows.empty? #Just incase the records are empty, we default it to "Hour"
+        @csv_header[0]= "\"Hour\""
+        @csv_rows << @csv_header.join(",")
       end
       @page_count += 1
     end
