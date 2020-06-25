@@ -41,7 +41,7 @@ module ROmniture
       counts = chunk["counts"]
       if counts.present?
         metric_counts = counts.each_with_index.map do |count, index|
-          @logger.debug(@metric_types[index]["type"])
+          @logger.info("MEtric count Type : #{@metric_types[index]["type"]} for #{count}")
           if @metric_types[index]["type"]=="number" || @metric_types[index]["type"]=="currency"
             if @metric_types[index]["decimals"]==0 ? count.to_i : count.to_f
           else
@@ -49,7 +49,7 @@ module ROmniture
           end
           end
         end
-        @logger.debug(metric_counts)
+        @logger.info("MEtric counts  : #{metric_counts}")
         s = value.join(",") +","+ metric_counts.join(",")
         @csv_rows << s
         value.pop

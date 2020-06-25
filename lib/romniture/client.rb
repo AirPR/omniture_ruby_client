@@ -36,7 +36,7 @@ module ROmniture
       response = send_request(method, parameters)
 
       begin
-        log(Logger::INFO, "request method #{method} #{response} : #{response.body} ")
+        log(Logger::INFO, "request method #{method} #{response} ")
         JSON.parse(response.body)
       rescue JSON::ParserError => pe
         log(Logger::ERROR, pe)
