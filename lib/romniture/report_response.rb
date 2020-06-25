@@ -42,14 +42,12 @@ module ROmniture
       if counts.present?
         @logger.info(counts)
         metric_counts = counts.each_with_index.map do |count, index|
-          @logger.info("MEtric count Type :#{@metric_types[index]} #{@metric_types[index][:type]} #{@metric_types[index]["type"]} for #{count}")
           if @metric_types[index][:type]=="number" || @metric_types[index][:type]=="currency"
              @metric_types[index][:decimals]==0 ? count.to_i : count.to_f
           else
             count
           end
         end
-        @logger.info("MEtric counts  : #{metric_counts}")
         s = value.join(",") +","+ metric_counts.join(",")
         @csv_rows << s
         value.pop
@@ -85,7 +83,7 @@ module ROmniture
             else
               @csv_header << metric["name"]
             end
-            @metric_types << {"type": metric["type"], "decimal": metric["decimal"]}
+            @metric_types << {"type": metric["type"], "decimal": metric["decimals"]}
           end
         end
         @csv_rows << @csv_header.join(",")
