@@ -6,13 +6,15 @@ module ROmniture
 
     DEFAULT_REPORT_WAIT_TIME = 0.25
     DEFAULT_API_VERSION = "1.3"
-    
+    REPORT_ID = "reportID"
+
+    V4_API_VERSION = "1.4"
+
     def initialize(username, shared_secret, environment, options={})
       @username       = username
       @shared_secret  = shared_secret
       @api_version    = options[:api_version] ? options[:api_version] : DEFAULT_API_VERSION
       @environment    = environment.is_a?(Symbol) ? environments[environment] : environment.to_s
-
       @wait_time      = options[:wait_time] ? options[:wait_time] : DEFAULT_REPORT_WAIT_TIME
       @log            = options[:log] ? options[:log] : false
       @verify_mode    = options[:verify_mode] ? options[:verify_mode] : false
@@ -36,6 +38,7 @@ module ROmniture
       response = send_request(method, parameters)
 
       begin
+        log(Logger::INFO, "request method #{method} #{response} ")
         JSON.parse(response.body)
       rescue JSON::ParserError => pe
         log(Logger::ERROR, pe)
@@ -75,7 +78,7 @@ module ROmniture
 
       parsed
     end
-    
+
     def get_report(method, report_description)      
       response = send_request(method, report_description)
       
@@ -107,46 +110,65 @@ module ROmniture
     def get_dw_result(url, &block)
       generate_nonce
       
-      log(Logger::INFO, "Created new nonce: #{@password}")
+      log(Logger::INFO, "get_dw_result Created new nonce: #{@password} for #{url} : #{@api_version}")
       
       request = HTTPI::Request.new
 
-      request.url = url
       request.headers = request_headers
 
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
 
-      ROmniture::DWResponse.new(request, block)
+      if @api_version != V4_API_VERSION
+        request.url = url
+        ROmniture::DWResponse.new(request, block)
+      else
+        request.url = @environment + "?method=Report.Get"
+        request.body = {REPORT_ID => url['reportID'],:page => 1}.to_json
+        log(Logger::INFO,"V4 Request #{request.url} : #{request.body}")
+        ROmniture::ReportResponse.new(@shared_secret, @username, request, block)
+      end
     end
 
     def get_result_as_gzip_str(url, &block)
       generate_nonce
+      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url}: #{@api_version}")
       request = HTTPI::Request.new
-      request.url = url
+      if @api_version != V4_API_VERSION
+        request.url = url
+      else
+        request.url = @environment + "?method=Report.Get"
+        log(Logger::INFO, request.url)
+        request.body = {REPORT_ID => url['reportID'],:page => 1}.to_json
+      end
       request.headers = request_headers
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
-      wio = StringIO.new("w:bom|utf-8")
-      begin
-        w_gz = Zlib::GzipWriter.new(wio)
-        request.on_body do |chunk|
-          if chunk
-            w_gz.write(chunk)
+      if V4_API_VERSION == @api_version
+        response = ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true)
+        response.get_gzip_data
+      else
+          wio = StringIO.new("w:bom|utf-8")
+          begin
+            w_gz = Zlib::GzipWriter.new(wio)
+            request.on_body do |chunk|
+              if chunk
+                w_gz.write(chunk)
+              end
+            end
+            response = HTTPI.post(request)
+            if response.code >= 400
+              logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+              w_gz.close
+              raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
+            end
+          ensure
+            w_gz.close
           end
+          wio.string
         end
-        response = HTTPI.post(request)
-        if response.code >= 400
-          logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
-          w_gz.close
-          raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
-        end
-      ensure
-        w_gz.close
-      end
-      wio.string
     end
     
     attr_writer :log
@@ -290,13 +312,14 @@ module ROmniture
 
       response = HTTPI.post(request)
       
-      if response.code >= 400
+      if response.code >= 400 and @version=='1.3'
         log(Logger::ERROR, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
-      
-      log(Logger::INFO, "Server responded with response code #{response.code}.")
-      
+      if response.code >= 400
+        log(Logger::INFO, "Request failed and responded with response code #{response.code}\n#{response.body}")
+      end
+      log(Logger::INFO, "Server responded with response code #{response.code}")
       response
     end
     
