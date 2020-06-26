@@ -112,6 +112,7 @@ module ROmniture
       if @csv_rows.empty? #Just incase the records are empty, we default it to "Hour"
         @csv_header[0]= "\"Hour\""
         @csv_rows << @csv_header.join(",")
+        @logger.info("@csv_rows header #{@csv_rows}")
       end
       @page_count += 1
     end
@@ -163,6 +164,7 @@ module ROmniture
           w_gz = Zlib::GzipWriter.new(@wio)
           data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true)
           w_gz.write(data.first) #Add header
+          @logger.info("In RResponse header gzip writer #{data.first}")
           data.each_with_index.map do |chunk, index|
             if chunk
               if index < 3
@@ -171,6 +173,7 @@ module ROmniture
               w_gz.write(chunk)
             end
           end
+          @logger.info("In RResponse header gzip writer data[0] #{data[0]}")
         ensure
           w_gz.close
         end
