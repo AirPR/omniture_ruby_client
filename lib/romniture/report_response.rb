@@ -9,12 +9,13 @@ module ROmniture
   class ReportResponse
 
 
-    def initialize(shared_secret=nil, user_name=nil, request=nil,map_function=nil)
+    def initialize(shared_secret=nil, user_name=nil, request=nil,map_function=nil,gzip_as_str=false)
       @logger = Logger.new(STDOUT)
       @logger.level = Logger::INFO
       @shared_secret = shared_secret
       @username = user_name
       @request = request
+      @gzip_as_str = gzip_as_str
       # Simply print records if mapping function not provided.
       if map_function.nil?
         @map_function = lambda do |records|
@@ -151,15 +152,39 @@ module ROmniture
 
 
     def process_buffer
-      success = false
-      if !@csv_rows.empty?
-        data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true) #TODO try to remove CSV parse and provide direct dicts
-        if !data.empty?
-          @map_function.call(data)
+      if @gzip_as_str
+        wio = StringIO.new("w:bom|utf-8")
+        begin
+          w_gz = Zlib::GzipWriter.new(wio)
+          data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true)
+          data do |chunk|
+            if chunk
+              chunk
+              log(Logger::INFO, "In RResponse get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
+            end
+          end
+          response = HTTPI.post(request)
+          log(Logger::INFO, "In RResponse get_result_as_gzip_str #{response.code} #{response.body}")
+          if response.code >= 400
+            logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+            w_gz.close
+            raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
+          end
+        ensure
+          w_gz.close
         end
-        success = true
-      end
+        wio.string
+      else
+      success = false
+        if !@csv_rows.empty?
+          data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true) #TODO try to remove CSV parse and provide direct dicts
+          if !data.empty?
+            @map_function.call(data)
+          end
+          success = true
+        end
       success
+      end
     end
 
   end

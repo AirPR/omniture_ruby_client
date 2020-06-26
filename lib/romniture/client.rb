@@ -7,6 +7,8 @@ module ROmniture
     DEFAULT_REPORT_WAIT_TIME = 0.25
     DEFAULT_API_VERSION = "1.3"
     REPORT_ID = "reportID"
+
+    V4_API_VERSION = "1.4"
     
     def initialize(username, shared_secret, environment, options={})
       @username       = username
@@ -108,7 +110,7 @@ module ROmniture
     def get_dw_result(url, &block)
       generate_nonce
       
-      log(Logger::INFO, "get_dw_result Created new nonce: #{@password} for #{url} : #{url.is_a?(String)}")
+      log(Logger::INFO, "get_dw_result Created new nonce: #{@password} for #{url} : #{@api_version}")
       
       request = HTTPI::Request.new
 
@@ -118,7 +120,7 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
 
-      if url.is_a?(String)
+      if @api_version != V4_API_VERSION
         request.url = url
         ROmniture::DWResponse.new(request, block)
       else
@@ -133,39 +135,43 @@ module ROmniture
 
     def get_result_as_gzip_str(url, &block)
       generate_nonce
-      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url} : #{url.is_a?(String)}")
+      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url} : #{@api_version}")
       request = HTTPI::Request.new
-      if url.is_a?(String)
+      if @api_version != V4_API_VERSION
         request.url = url
       else
         request.url = @environment + "?method=Report.Get"
         log(Logger::INFO, request.url)
-        request.body = {REPORT_ID=>url['reportID'],:page => 1}
+        request.body = {REPORT_ID => url['reportID'],:page => 1}.to_json
       end
       request.headers = request_headers
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
-      wio = StringIO.new("w:bom|utf-8")
-      begin
-        w_gz = Zlib::GzipWriter.new(wio)
-        request.on_body do |chunk|
-          if chunk
-            chunk
-            log(Logger::INFO, "get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
+      if V4_API_VERSION == @version
+        ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true)
+      else
+        wio = StringIO.new("w:bom|utf-8")
+        begin
+          w_gz = Zlib::GzipWriter.new(wio)
+          request.on_body do |chunk|
+            if chunk
+              chunk
+              log(Logger::INFO, "get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
+            end
           end
-        end
-        response = HTTPI.post(request)
-        log(Logger::INFO, "get_result_as_gzip_str #{response.code} #{response.body}")
-        if response.code >= 400
-          logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+          response = HTTPI.post(request)
+          log(Logger::INFO, "get_result_as_gzip_str #{response.code} #{response.body}")
+          if response.code >= 400
+            logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+            w_gz.close
+            raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
+          end
+        ensure
           w_gz.close
-          raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
         end
-      ensure
-        w_gz.close
-      end
-      wio.string
+        wio.string
+        end
     end
     
     attr_writer :log
