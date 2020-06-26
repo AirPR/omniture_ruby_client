@@ -137,13 +137,14 @@ module ROmniture
       @request.headers = request_headers
       response = HTTPI.post(@request)
       body = JSON.parse(@request.body)
-      @logger.debug("V4 Report download for #{body} with response code #{response.code}")
+      @logger.info("V4 Report download for #{body} with response code #{response.code}")
       if response.code >= 400
         @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
       end
 
       result = JSON.parse(response.body)["report"]
+      @logger.info("V4 Report downloaded for #{body}, total pages : #{result["totalPages"]} ")
       process_chunk(result)
       if @page_count <= result["totalPages"]
         @request.body = {"reportID" => body["reportID"],"page" => @page_count}.to_json
