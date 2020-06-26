@@ -160,8 +160,7 @@ module ROmniture
       if @gzip_as_str
         begin
           w_gz = Zlib::GzipWriter.new(@wio)
-          data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true)
-          w_gz.write(data.headers) #Add header
+          data = CSV.parse(@csv_rows.join("\n"), skip_blanks: true)
           data.map do |chunk|
             if chunk
               w_gz.write(chunk)
