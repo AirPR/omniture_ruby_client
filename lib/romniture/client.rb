@@ -135,7 +135,7 @@ module ROmniture
 
     def get_result_as_gzip_str(url, &block)
       generate_nonce
-      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url} : #{@api_version} : #{V4_API_VERSION == @version}")
+      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url}: #{@api_version}")
       request = HTTPI::Request.new
       if @api_version != V4_API_VERSION
         request.url = url
@@ -148,7 +148,7 @@ module ROmniture
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
-      if V4_API_VERSION == @version
+      if V4_API_VERSION == @api_version
         ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true)
       else
           wio = StringIO.new("w:bom|utf-8")
