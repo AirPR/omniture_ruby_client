@@ -167,7 +167,7 @@ module ROmniture
               if index < 3
                 @logger.info("In RResponse get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
               end
-              chunk
+              w_gz.write(chunk)
             end
           end
         ensure

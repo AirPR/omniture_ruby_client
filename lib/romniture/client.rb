@@ -159,7 +159,7 @@ module ROmniture
             w_gz = Zlib::GzipWriter.new(wio)
             request.on_body do |chunk|
               if chunk
-                chunk
+                w_gz.write(chunk)
               end
             end
             response = HTTPI.post(request)
