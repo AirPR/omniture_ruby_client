@@ -162,6 +162,7 @@ module ROmniture
         begin
           w_gz = Zlib::GzipWriter.new(@wio)
           data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true)
+          w_gz.write(data.first) #Add header
           data.each_with_index.map do |chunk, index|
             if chunk
               if index < 3
