@@ -151,7 +151,8 @@ module ROmniture
         w_gz = Zlib::GzipWriter.new(wio)
         request.on_body do |chunk|
           if chunk
-            w_gz.write(chunk)
+            chunk
+            log(Logger::INFO, "get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
           end
         end
         response = HTTPI.post(request)
