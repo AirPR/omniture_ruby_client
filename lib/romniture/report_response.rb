@@ -161,7 +161,7 @@ module ROmniture
           data.each_with_index.map do |chunk, index|
             if chunk
               if index < 3
-                log(Logger::INFO, "In RResponse get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
+                @logger.info("In RResponse get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
               end
               chunk
             end
