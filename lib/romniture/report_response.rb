@@ -139,7 +139,7 @@ module ROmniture
       @logger.info("report download for #{body} #{response.code}")
       if response.code >= 400
         @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
-        raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
+        raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
       end
 
       result = JSON.parse(response.body)["report"]
@@ -158,33 +158,28 @@ module ROmniture
         begin
           w_gz = Zlib::GzipWriter.new(wio)
           data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true)
-          data do |chunk|
+          data.each_with_index.map do |chunk, index|
             if chunk
+              if index < 3
+                log(Logger::INFO, "In RResponse get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
+              end
               chunk
-              log(Logger::INFO, "In RResponse get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
             end
-          end
-          response = HTTPI.post(request)
-          log(Logger::INFO, "In RResponse get_result_as_gzip_str #{response.code} #{response.body}")
-          if response.code >= 400
-            logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
-            w_gz.close
-            raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
           end
         ensure
           w_gz.close
         end
         wio.string
       else
-      success = false
-        if !@csv_rows.empty?
-          data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true) #TODO try to remove CSV parse and provide direct dicts
-          if !data.empty?
-            @map_function.call(data)
+        success = false
+          if !@csv_rows.empty?
+            data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true) #TODO try to remove CSV parse and provide direct dicts
+            if !data.empty?
+              @map_function.call(data)
+            end
+            success = true
           end
-          success = true
-        end
-      success
+        success
       end
     end
 
