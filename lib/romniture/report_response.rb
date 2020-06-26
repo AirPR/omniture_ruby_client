@@ -38,7 +38,7 @@ module ROmniture
       end
     end
 
-    def get_gzip_data()
+    def get_gzip_data
       @wio.string
     end
 

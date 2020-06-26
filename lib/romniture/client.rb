@@ -150,7 +150,9 @@ module ROmniture
       end
       if V4_API_VERSION == @api_version
         response = ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true)
-        response.get_gzip_data
+        string = response.get_gzip_data
+        log(Logger::INFO, "Final Result in client get_result_as_gzip_str #{string}")
+        string
       else
           wio = StringIO.new("w:bom|utf-8")
           begin
