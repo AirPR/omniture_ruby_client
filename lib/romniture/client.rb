@@ -161,7 +161,6 @@ module ROmniture
               end
             end
             response = HTTPI.post(request)
-            log(Logger::INFO, "get_result_as_gzip_str #{response.code} #{response.body}")
             if response.code >= 400
               logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
               w_gz.close
@@ -170,7 +169,6 @@ module ROmniture
           ensure
             w_gz.close
           end
-          log(Logger::INFO, "get_result_as_gzip_str w_gz.write(chunk) #{wio.string}")
           wio.string
         end
     end
@@ -325,7 +323,6 @@ module ROmniture
       end
       log(Logger::INFO, "Server responded with response code #{response.code}")
       response
-
     end
     
     def generate_nonce

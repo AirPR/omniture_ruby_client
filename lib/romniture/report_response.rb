@@ -67,7 +67,6 @@ module ROmniture
     end
 
     def process_chunk(response)
-      @logger.info("Server responded with response total pages #{response["totalPages"]}.")
       data = response["data"]
       metrics = response["metrics"]
       breakdowns = response["elements"]
@@ -90,8 +89,6 @@ module ROmniture
             @metric_types << {"type": metric["type"], "decimals": metric["decimals"]}
           end
         end
-        @logger.info("Header rows : #{@csv_header}")
-        @logger.info("@metric_types #{@metric_types}")
       end
 
       value = []
@@ -140,7 +137,7 @@ module ROmniture
       @request.headers = request_headers
       response = HTTPI.post(@request)
       body = JSON.parse(@request.body)
-      @logger.info("report download for #{body} #{response.code}")
+      @logger.debug("V4 Report download for #{body} with response code #{response.code}")
       if response.code >= 400
         @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
@@ -148,8 +145,7 @@ module ROmniture
 
       result = JSON.parse(response.body)["report"]
       process_chunk(result)
-      if @page_count<2 && @page_count <= result["totalPages"]
-        @logger.info("reportID: #{body["reportID"]} count: #{@page_count}")
+      if @page_count <= result["totalPages"]
         @request.body = {"reportID" => body["reportID"],"page" => @page_count}.to_json
         download
       end
