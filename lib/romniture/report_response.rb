@@ -89,6 +89,7 @@ module ROmniture
             @metric_types << {"type": metric["type"], "decimals": metric["decimals"]}
           end
         end
+        @logger.info("V4 Report Headers #{@csv_header}")
       end
 
       value = []
