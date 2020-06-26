@@ -91,7 +91,6 @@ module ROmniture
           end
         end
         @logger.info("Header rows : #{@csv_header}")
-        @logger.info("CSV Header rows : #{@csv_rows}")
         @logger.info("@metric_types #{@metric_types}")
       end
 
@@ -105,6 +104,7 @@ module ROmniture
               @csv_header[0]= "\"Date\""
             end
             @csv_rows << @csv_header.join(",")
+            @logger.info("@csv_rows header #{@csv_rows}")
           end
           parse_breakdown(chunk,value)
         end
