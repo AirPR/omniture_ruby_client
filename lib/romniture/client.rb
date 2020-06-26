@@ -124,11 +124,9 @@ module ROmniture
         request.url = url
         ROmniture::DWResponse.new(request, block)
       else
-        log(Logger::INFO,@environment + "?method=Report.Get")
         request.url = @environment + "?method=Report.Get"
-        log(Logger::INFO, request.url)
         request.body = {REPORT_ID => url['reportID'],:page => 1}.to_json
-        log(Logger::INFO,"RRRespomse #{request.body}")
+        log(Logger::INFO,"V4 Request #{request.url} : #{request.body}")
         ROmniture::ReportResponse.new(@shared_secret, @username, request, block)
       end
     end
