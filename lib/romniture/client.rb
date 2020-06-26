@@ -160,7 +160,6 @@ module ROmniture
             request.on_body do |chunk|
               if chunk
                 chunk
-                log(Logger::INFO, "get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
               end
             end
             response = HTTPI.post(request)
@@ -173,6 +172,7 @@ module ROmniture
           ensure
             w_gz.close
           end
+          log(Logger::INFO, "get_result_as_gzip_str w_gz.write(chunk) #{wio.string}")
           wio.string
         end
     end
