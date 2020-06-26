@@ -135,7 +135,7 @@ module ROmniture
 
     def get_result_as_gzip_str(url, &block)
       generate_nonce
-      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url} : #{@api_version}")
+      log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url} : #{@api_version} : #{V4_API_VERSION == @version}")
       request = HTTPI::Request.new
       if @api_version != V4_API_VERSION
         request.url = url
@@ -151,26 +151,26 @@ module ROmniture
       if V4_API_VERSION == @version
         ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true)
       else
-        wio = StringIO.new("w:bom|utf-8")
-        begin
-          w_gz = Zlib::GzipWriter.new(wio)
-          request.on_body do |chunk|
-            if chunk
-              chunk
-              log(Logger::INFO, "get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
+          wio = StringIO.new("w:bom|utf-8")
+          begin
+            w_gz = Zlib::GzipWriter.new(wio)
+            request.on_body do |chunk|
+              if chunk
+                chunk
+                log(Logger::INFO, "get_result_as_gzip_str w_gz.write(chunk) #{chunk}")
+              end
             end
-          end
-          response = HTTPI.post(request)
-          log(Logger::INFO, "get_result_as_gzip_str #{response.code} #{response.body}")
-          if response.code >= 400
-            logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+            response = HTTPI.post(request)
+            log(Logger::INFO, "get_result_as_gzip_str #{response.code} #{response.body}")
+            if response.code >= 400
+              logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+              w_gz.close
+              raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
+            end
+          ensure
             w_gz.close
-            raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
           end
-        ensure
-          w_gz.close
-        end
-        wio.string
+          wio.string
         end
     end
     

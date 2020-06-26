@@ -16,6 +16,7 @@ module ROmniture
       @username = user_name
       @request = request
       @gzip_as_str = gzip_as_str
+      @logger.info("RResponse @gzip_as_str #{@gzip_as_str}")
       # Simply print records if mapping function not provided.
       if map_function.nil?
         @map_function = lambda do |records|
