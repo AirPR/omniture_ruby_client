@@ -144,7 +144,7 @@ module ROmniture
 
       result = JSON.parse(response.body)["report"]
       process_chunk(result)
-      if @page_count <= result["totalPages"]
+      if @page_count<2 && @page_count <= result["totalPages"]
         @logger.info("reportID: #{body["reportID"]} count: #{@page_count}")
         @request.body = {"reportID" => body["reportID"],"page" => @page_count}.to_json
         download
