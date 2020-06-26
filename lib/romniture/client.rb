@@ -312,8 +312,10 @@ module ROmniture
         log(Logger::ERROR, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
         raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
       end
-      
-      log(Logger::INFO, "Server responded with response code #{response.code}.")
+      if response.code >= 400
+        log(Logger::INFO, "Request failed and responded with response code #{response.code}\n#{response.body}")
+      end
+      log(Logger::INFO, "Server responded with response code #{response.code}")
       response
 
     end
