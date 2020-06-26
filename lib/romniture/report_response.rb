@@ -31,10 +31,15 @@ module ROmniture
       @csv_header = []
       @csv_rows = []
       @metric_types = []
+      @wio = StringIO.new("w:bom|utf-8")
       if !@request.nil?
         download
         process_buffer
       end
+    end
+
+    def get_gzip_data()
+      @wio.string
     end
 
     def parse_breakdown(chunk,value)
@@ -154,9 +159,8 @@ module ROmniture
 
     def process_buffer
       if @gzip_as_str
-        wio = StringIO.new("w:bom|utf-8")
         begin
-          w_gz = Zlib::GzipWriter.new(wio)
+          w_gz = Zlib::GzipWriter.new(@wio)
           data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true)
           data.each_with_index.map do |chunk, index|
             if chunk
@@ -169,7 +173,6 @@ module ROmniture
         ensure
           w_gz.close
         end
-        wio.string
       else
         success = false
           if !@csv_rows.empty?

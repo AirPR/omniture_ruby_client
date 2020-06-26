@@ -149,7 +149,8 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
       if V4_API_VERSION == @api_version
-        ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true)
+        response = ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true)
+        response.get_gzip_data
       else
           wio = StringIO.new("w:bom|utf-8")
           begin
