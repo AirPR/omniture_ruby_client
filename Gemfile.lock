@@ -28,7 +28,7 @@ GEM
       concurrent-ruby (~> 1.0)
     json (2.3.0)
     minitest (5.14.1)
-    rack (2.2.2)
+    rack (2.2.3)
     socksify (1.7.1)
     thread_safe (0.3.6)
     tzinfo (1.2.7)
