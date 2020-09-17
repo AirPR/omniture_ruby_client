@@ -82,9 +82,9 @@ module ROmniture
           metrics.each do |metric|
             matches = /\((event[0-9]+)\)/.match(metric["id"])
             evar_matches = /\((evar[0-9]+)\)/.match(metric["id"])
-            print(matches)
-            print(evar_matches)
-            if (matches and matches.length) or (evar_matches and evar_matches.length)
+            @logger.info(matches)
+            @logger.info(evar_matches)
+            if (matches and matches.length) || (evar_matches and evar_matches.length)
               @csv_header << "\"#{metric["name"]}(#{metric["id"]})\""
             else
               @csv_header << "\"#{metric["name"]}\""
