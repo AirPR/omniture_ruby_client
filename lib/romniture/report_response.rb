@@ -80,7 +80,13 @@ module ROmniture
         end
         if metrics.present?
           metrics.each do |metric|
-            @csv_header << "\"#{metric["name"]}\""
+            matches = /\((event[0-9]+)\)/.match(metric["id"])
+            evar_matches = /\((evar[0-9]+)\)/.match(metric["id"])
+            if (matches and matches.length) or (evar_matches and evar_matches.length)
+              @csv_header << "\"#{metric["name"]}(#{metric["id"]})\""
+            else
+              @csv_header << "\"#{metric["name"]}\""
+            end
             @metric_types << {"type": metric["type"], "decimals": metric["decimals"]}
           end
         end
