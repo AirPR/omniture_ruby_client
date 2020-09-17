@@ -80,8 +80,8 @@ module ROmniture
         end
         if metrics.present?
           metrics.each do |metric|
-            matches = /\((event[0-9]+)\)/.match(metric["id"])
-            evar_matches = /\((evar[0-9]+)\)/.match(metric["id"])
+            matches = /\(event[0-9]+\)/.match(metric["id"])
+            evar_matches = /\(evar[0-9]+\)/.match(metric["id"])
             @logger.info("matches #{matches}")
             @logger.info("evar_matches #{evar_matches}")
             if (matches and matches.length) || (evar_matches and evar_matches.length)
