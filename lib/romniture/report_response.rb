@@ -31,7 +31,7 @@ module ROmniture
       @csv_header = []
       @csv_rows = []
       @metric_types = []
-      @retries = 5
+      @retries = 20
       @wio = StringIO.new("w:bom|utf-8")
       if !@request.nil?
         download
@@ -138,14 +138,13 @@ module ROmniture
     def download
       begin
           generate_nonce
+          request = HTTPI::Request.new
+          request.url = @request.url
+          request.headers = request_headers
+          request.body = @request.body
+          response = HTTPI.post(request)
 
-          next_request = HTTPI::Request.new
-          next_request.url = @request.url
-          next_request.headers = request_headers
-          next_request.body = @request.body
-          response = HTTPI.post(next_request)
-
-          body = JSON.parse(next_request.body)
+          body = JSON.parse(request.body)
           @logger.info("V4 Report download for #{body} with response code #{response.code}")
           if response.code >= 400
             @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
@@ -164,9 +163,10 @@ module ROmniture
         stored_error = ex.backtrace.join("\n")
         @logger.info ("Exception V4 Report downloading for #{@request.body} #{stored_error} Retrying #{@retries}")
         if (@retries -= 1) >= 0
-          sleep 2**@retries
+          sleep 10
           retry
         end
+
       end
     end
 
