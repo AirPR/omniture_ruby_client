@@ -160,7 +160,7 @@ module ROmniture
             download
           end
       rescue Exception => ex
-        stored_error = error.backtrace.join("\n")
+        stored_error = ex.backtrace.join("\n")
         @logger.info ("Exception V4 Report downloading for #{@request.body} #{stored_error} Retrying #{@retries}")
         if (@retries -= 1) >= 0
           retry
