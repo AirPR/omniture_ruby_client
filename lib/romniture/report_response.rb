@@ -31,6 +31,7 @@ module ROmniture
       @csv_header = []
       @csv_rows = []
       @metric_types = []
+      @retries = 5
       @wio = StringIO.new("w:bom|utf-8")
       if !@request.nil?
         download
@@ -80,7 +81,13 @@ module ROmniture
         end
         if metrics.present?
           metrics.each do |metric|
-            @csv_header << "\"#{metric["name"]}\""
+            matches = /event[0-9]+/.match(metric["id"])
+            evar_matches = /evar[0-9]+/.match(metric["id"])
+            if (matches and matches.length) || (evar_matches and evar_matches.length)
+              @csv_header << "\"#{metric["name"]} (#{metric["id"]})\""
+            else
+              @csv_header << "\"#{metric["name"]}\""
+            end
             @metric_types << {"type": metric["type"], "decimals": metric["decimals"]}
           end
         end
@@ -154,7 +161,10 @@ module ROmniture
           end
       rescue Exception => ex
         stored_error = error.backtrace.join("\n")
-        @logger.info ("Exception V4 Report downloading for #{@request.body} #{stored_error}")
+        @logger.info ("Exception V4 Report downloading for #{@request.body} #{stored_error} Retrying #{@retries}")
+        if (@retries -= 1) >= 0
+          retry
+        end
       end
     end
 
