@@ -140,6 +140,7 @@ module ROmniture
           generate_nonce
 
           next_request = HTTPI::Request.new
+          next_request.url = @request.url
           next_request.headers = request_headers
           next_request.body = @request.body
           response = HTTPI.post(next_request)
