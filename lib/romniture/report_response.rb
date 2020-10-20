@@ -31,6 +31,7 @@ module ROmniture
       @csv_header = []
       @csv_rows = []
       @metric_types = []
+      @retries = 20
       @wio = StringIO.new("w:bom|utf-8")
       if !@request.nil?
         download
@@ -80,7 +81,13 @@ module ROmniture
         end
         if metrics.present?
           metrics.each do |metric|
-            @csv_header << "\"#{metric["name"]}\""
+            matches = /event[0-9]+/.match(metric["id"])
+            evar_matches = /evar[0-9]+/.match(metric["id"])
+            if (matches and matches.length) || (evar_matches and evar_matches.length)
+              @csv_header << "\"#{metric["name"]} (#{metric["id"]})\""
+            else
+              @csv_header << "\"#{metric["name"]}\""
+            end
             @metric_types << {"type": metric["type"], "decimals": metric["decimals"]}
           end
         end
@@ -129,22 +136,37 @@ module ROmniture
 
     # Initiates the download
     def download
-      generate_nonce
-      @request.headers = request_headers
-      response = HTTPI.post(@request)
-      body = JSON.parse(@request.body)
-      @logger.info("V4 Report download for #{body} with response code #{response.code}")
-      if response.code >= 400
-        @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
-        raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
-      end
+      begin
+          generate_nonce
+          request = HTTPI::Request.new
+          request.url = @request.url
+          request.headers = request_headers
+          request.body = @request.body
+          response = HTTPI.post(request)
 
-      result = JSON.parse(response.body)["report"]
-      @logger.info("V4 Report downloaded for #{body}, total pages : #{result["totalPages"]} ")
-      process_chunk(result)
-      if @page_count <= result["totalPages"]
-        @request.body = {"reportID" => body["reportID"],"page" => @page_count}.to_json
-        download
+          body = JSON.parse(request.body)
+          @logger.info("V4 Report download for #{body} with response code #{response.code}")
+          if response.code >= 400
+            @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+            raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
+          end
+
+          result = JSON.parse(response.body)["report"]
+          @logger.info("V4 Report downloaded for #{body}, total pages : #{result["totalPages"]} ")
+          process_chunk(result)
+          @logger.info("V4 Report processed for #{body}, total pages : #{result["totalPages"]} ")
+          if @page_count <= result["totalPages"]
+            @request.body = {"reportID" => body["reportID"],"page" => @page_count}.to_json
+            download
+          end
+      rescue Exception => ex
+        stored_error = ex.backtrace.join("\n")
+        @logger.info ("Exception V4 Report downloading for #{@request.body} #{stored_error} Retrying #{@retries}")
+        if (@retries -= 1) >= 0
+          sleep 10
+          retry
+        end
+
       end
     end
 
