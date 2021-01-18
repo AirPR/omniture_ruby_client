@@ -1,3 +1,5 @@
+require 'jwt'
+
 module ROmniture
 
   # Report response class.
@@ -9,11 +11,16 @@ module ROmniture
   class ReportResponse
 
 
-    def initialize(shared_secret=nil, user_name=nil, request=nil,map_function=nil,gzip_as_str=false)
+    def initialize(shared_secret=nil, user_name=nil, client_id=nil, client_secret=nil, private_key=nil, sub=nil, iss=nil, request=nil, map_function=nil, gzip_as_str=false)
       @logger = Logger.new(STDOUT)
       @logger.level = Logger::INFO
       @shared_secret = shared_secret
       @username = user_name
+      @client_id = client_id
+      @client_secret = client_secret
+      @private_key = private_key
+      @sub = sub
+      @iss = iss
       @request = request
       @gzip_as_str = gzip_as_str
       @logger.info("RResponse @gzip_as_str #{@gzip_as_str}")
@@ -33,6 +40,7 @@ module ROmniture
       @metric_types = []
       @retries = 20
       @wio = StringIO.new("w:bom|utf-8")
+      @access_token = nil
       if !@request.nil?
         download
         process_buffer
@@ -41,6 +49,35 @@ module ROmniture
 
     def get_gzip_data
       @wio.string
+    end
+
+    def get_jwt_token
+      data = {
+          "exp": DateTime.now.to_time + 24.hours,
+          "iss": @iss,
+          "sub": @sub,
+          "https://ims-na1.adobelogin.com/s/ent_analytics_bulk_ingest_sdk": true,
+          "aud": "https://ims-na1.adobelogin.com/c/#{@client_id}"
+      }
+      private_key=File.read("config/private.key")
+      token = JWT.encode data, private_key
+      token
+    end
+
+    def get_access_token()
+      request = HTTPI::Request.new
+      request.url = "https://ims-na1.adobelogin.com/ims/exchange/jwt"
+      request.body = {
+          "client_id": @client_id,
+          "client_secret": @client_secret,
+          "jwt_token": get_jwt_token
+      }
+      response = HTTPI.post(request)
+      body = JSON.parse(response.body)
+      if response.code != 200
+        return nil
+      end
+      @access_token = body["access_token"]
     end
 
     def parse_breakdown(chunk,value)
@@ -125,11 +162,18 @@ module ROmniture
       @password       = Base64.encode64(@sha1_string).to_s.chomp("\n")
     end
 
-    def request_headers
-      {
-          "X-WSSE" => "UsernameToken Username=\"#{@username}\", PasswordDigest=\"#{@password}\", Nonce=\"#{@nonce}\", Created=\"#{@created}\"",
-          'Content-Type' => 'application/json'   #Added by ROB on 2013-08-22 because the Adobe Social API seems to require this be set
-      }
+    def request_headers(x_wsse=false)
+      if x_wsse
+        {
+            "X-WSSE" => "UsernameToken Username=\"#{@username}\", PasswordDigest=\"#{@password}\", Nonce=\"#{@nonce}\", Created=\"#{@created}\"",
+            'Content-Type' => 'application/json'   #Added by ROB on 2013-08-22 because the Adobe Social API seems to require this be set
+        }
+      else
+        {
+            "Authorization" => "Bearer #{@access_token}",
+            'Content-Type' => 'application/json'
+        }
+      end
     end
 
     private
@@ -137,10 +181,16 @@ module ROmniture
     # Initiates the download
     def download
       begin
-          generate_nonce
           request = HTTPI::Request.new
           request.url = @request.url
-          request.headers = request_headers
+          if @shared_secret
+            generate_nonce
+            request.headers = request_headers(x_wsse=true)
+          else
+            get_access_token
+            request.headers = request_headers(x_wsse=false)
+          end
+
           request.body = @request.body
           response = HTTPI.post(request)
 

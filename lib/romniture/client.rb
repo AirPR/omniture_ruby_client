@@ -10,7 +10,7 @@ module ROmniture
 
     V4_API_VERSION = "1.4"
 
-    def initialize(username, shared_secret, environment, options={})
+    def initialize(username, shared_secret, environment, client_id, client_secret, private_key, sub, iss, options={})
       @username       = username
       @shared_secret  = shared_secret
       @api_version    = options[:api_version] ? options[:api_version] : DEFAULT_API_VERSION
@@ -20,6 +20,11 @@ module ROmniture
       @verify_mode    = options[:verify_mode] ? options[:verify_mode] : false
       #@insert_url     = "https://airpr.d1.sc.omtrdc.net/b/ss/airprptnrdev/6/"
       @insert_url     = ''
+      @client_id      = client_id
+      @client_secret  = client_secret
+      @private_key    = private_key
+      @sub            = sub
+      @iss            = iss
       HTTPI.log       = true
     end
 
@@ -126,7 +131,7 @@ module ROmniture
         request.url = @environment + "?method=Report.Get"
         request.body = {REPORT_ID => url['reportID'],:page => 1}.to_json
         log(Logger::INFO,"V4 Request #{request.url} : #{request.body}")
-        ROmniture::ReportResponse.new(@shared_secret, @username, request, block)
+        ROmniture::ReportResponse.new(@shared_secret, @username, @client_id, @client_secret, @private_key, @sub, @iss, request, block)
       end
     end
 
@@ -146,7 +151,7 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
       if V4_API_VERSION == @api_version
-        response = ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true)
+        response = ROmniture::ReportResponse.new(@shared_secret, @username, @shared_secret, @username, @client_id, @client_secret, @private_key, @sub, @iss, request, block, true)
         response.get_gzip_data
       else
           wio = StringIO.new("w:bom|utf-8")
