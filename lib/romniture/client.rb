@@ -151,7 +151,7 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
       if V4_API_VERSION == @api_version
-        response = ROmniture::ReportResponse.new(@shared_secret, @username, @shared_secret, @username, @client_id, @client_secret, @private_key, @sub, @iss, request, block, true)
+        response = ROmniture::ReportResponse.new(@shared_secret, @username, @client_id, @client_secret, @private_key, @sub, @iss, request, block, true)
         response.get_gzip_data
       else
           wio = StringIO.new("w:bom|utf-8")
@@ -300,7 +300,11 @@ module ROmniture
     
     def send_request(method, data)
       log(Logger::INFO, "Requesting #{method}...")
-      generate_nonce
+      if @username and @password
+        generate_nonce
+      else
+        get_access_token
+      end
       
       log(Logger::INFO, "Created new nonce: #{@password}")
       
@@ -311,7 +315,7 @@ module ROmniture
       end
 
       request.url = @environment + "?method=#{method}"
-      request.headers = request_headers
+      request.headers = request_headers(x_wsse=@username and @password)
       request.body = data.to_json
 
       response = HTTPI.post(request)
@@ -340,13 +344,49 @@ module ROmniture
       combined_string = @nonce + @created + @shared_secret
       sha1_string     = Digest::SHA1.new.hexdigest(combined_string)
       @password       = Base64.encode64(sha1_string).to_s.chomp("\n")
-    end    
+    end
 
-    def request_headers 
+    def get_jwt_token
+      data = {
+          "exp": DateTime.now.to_time + 24.hours,
+          "iss": @iss,
+          "sub": @sub,
+          "https://ims-na1.adobelogin.com/s/ent_analytics_bulk_ingest_sdk": true,
+          "aud": "https://ims-na1.adobelogin.com/c/#{@client_id}"
+      }
+      private_key=File.read("config/private.key")
+      token = JWT.encode data, private_key
+      token
+    end
+
+    def get_access_token
+      request = HTTPI::Request.new
+      request.url = "https://ims-na1.adobelogin.com/ims/exchange/jwt"
+      request.body = {
+          "client_id": @client_id,
+          "client_secret": @client_secret,
+          "jwt_token": get_jwt_token
+      }
+      response = HTTPI.post(request)
+      body = JSON.parse(response.body)
+      if response.code != 200
+        return nil
+      end
+      @access_token = body["access_token"]
+    end
+
+    def request_headers(x_wsse=true)
+      if x_wsse
       {
         "X-WSSE" => "UsernameToken Username=\"#{@username}\", PasswordDigest=\"#{@password}\", Nonce=\"#{@nonce}\", Created=\"#{@created}\"",
         'Content-Type' => 'application/json'   #Added by ROB on 2013-08-22 because the Adobe Social API seems to require this be set
       }
+      else
+        {
+            "Authorization" => "Bearer #{@access_token}",
+            'Content-Type' => 'application/json'
+        }
+      end
     end
     
     def get_queued_report(report_id)

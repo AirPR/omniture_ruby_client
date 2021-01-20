@@ -64,7 +64,7 @@ module ROmniture
       token
     end
 
-    def get_access_token()
+    def get_access_token
       request = HTTPI::Request.new
       request.url = "https://ims-na1.adobelogin.com/ims/exchange/jwt"
       request.body = {
@@ -162,7 +162,7 @@ module ROmniture
       @password       = Base64.encode64(@sha1_string).to_s.chomp("\n")
     end
 
-    def request_headers(x_wsse=false)
+    def request_headers(x_wsse=true)
       if x_wsse
         {
             "X-WSSE" => "UsernameToken Username=\"#{@username}\", PasswordDigest=\"#{@password}\", Nonce=\"#{@nonce}\", Created=\"#{@created}\"",
