@@ -300,10 +300,12 @@ module ROmniture
     
     def send_request(method, data)
       log(Logger::INFO, "Requesting #{method}...")
+      x_wsse = true
       if @username and @password
         generate_nonce
       else
         get_access_token
+        x_wsse = false
       end
       
       log(Logger::INFO, "Created new nonce: #{@password}")
@@ -315,7 +317,7 @@ module ROmniture
       end
 
       request.url = @environment + "?method=#{method}"
-      request.headers = request_headers(x_wsse=@username and @password)
+      request.headers = request_headers(x_wsse)
       request.body = data.to_json
 
       response = HTTPI.post(request)
