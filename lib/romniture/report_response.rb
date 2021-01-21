@@ -53,14 +53,14 @@ module ROmniture
 
     def get_jwt_token
       data = {
-          "exp": DateTime.now.to_time + 24.hours,
+          "exp": (DateTime.now.to_time + 24.hours).to_time.to_i,
           "iss": @iss,
           "sub": @sub,
           "https://ims-na1.adobelogin.com/s/ent_analytics_bulk_ingest_sdk": true,
           "aud": "https://ims-na1.adobelogin.com/c/#{@client_id}"
       }
-      private_key=File.read("config/private.key")
-      token = JWT.encode data, private_key
+      private_key= OpenSSL::PKey::RSA.new(@private_key)
+      token = JWT.encode data, private_key, "RS256"
       token
     end
 
