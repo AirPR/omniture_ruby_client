@@ -139,6 +139,7 @@ module ROmniture
       begin
           generate_nonce
           request = HTTPI::Request.new
+          request.read_timeout=600 #Wait for 10 minutes for long adobe reports
           request.url = @request.url
           request.headers = request_headers
           request.body = @request.body
@@ -152,21 +153,22 @@ module ROmniture
           end
 
           result = JSON.parse(response.body)["report"]
-          @logger.info("V4 Report downloaded for #{body}, total pages : #{result["totalPages"]} ")
+          @logger.info("V4 Report downloaded for #{body}, total pages : #{result["totalPages"]} currentPage: #{@page_count} ")
+
           process_chunk(result)
-          @logger.info("V4 Report processed for #{body}, total pages : #{result["totalPages"]} ")
+
+          @logger.info("V4 Report processed for #{body}, total pages : #{result["totalPages"]} currentPage: #{@page_count} ")
           if @page_count <= result["totalPages"]
             @request.body = {"reportID" => body["reportID"],"page" => @page_count}.to_json
             download
           end
       rescue Exception => ex
         stored_error = ex.backtrace.join("\n")
-        @logger.info ("Exception V4 Report downloading for #{@request.body} #{stored_error} Retrying #{@retries}")
+        @logger.info("Exception V4 Report downloading for #{@request.body} #{stored_error} Retrying #{@retries}")
         if (@retries -= 1) >= 0
           sleep 10
           retry
         end
-
       end
     end
 
