@@ -385,7 +385,9 @@ module ROmniture
       else
         {
             "Authorization" => "Bearer #{@access_token}",
-            'Content-Type' => 'application/json'
+            'Content-Type' => 'application/json',
+            "x-api-key" => @client_id,
+            "x-proxy-global-company-id" => @username,
         }
       end
     end
