@@ -44,10 +44,47 @@ module ROmniture
         response.body
       rescue Exception => e
         log(Logger::ERROR, e)
-        log(Logger::ERROR, "Error in request response:\n#{response.body}")
-        raise "Error in request response:\n#{response.body}"
+        log(Logger::ERROR, "Error in request response: #{response.body}")
+        raise "Error in request response: #{response.body}"
       end
     end
+
+    def request_partitioned_data(method, parameters = {})
+      log(Logger::INFO, "Started Requesting Partitioned data for #{method} #{parameters}")
+
+      from = parameters["reportDescription"]["dateFrom"]
+      to = parameters["reportDescription"]["dateTo"]
+      responses = []
+
+      from = from.to_datetime
+      to = to.to_datetime
+      no_of_days = (to - from).to_i + 1
+
+
+      no_of_days.times do
+        (0..23).each do
+          to = (from +  59.minutes + 59.seconds)
+          parameters["reportDescription"]["dateFrom"] = from.strftime('%y-%m-%dT%H:%M:%S')
+          parameters["reportDescription"]["dateTo"] = to.strftime('%y-%m-%dT%H:%M:%S')
+          log(Logger::INFO, "Requesting request_partitioned_data #{method} #{parameters}")
+          response = send_request(method, parameters)
+          begin
+            response = JSON.parse(response.body)
+            responses.append(response)
+          rescue JSON::ParserError => pe
+            log(Logger::ERROR, pe)
+            responses.append(response.body)
+          rescue Exception => e
+            log(Logger::ERROR, "Error in request response: #{response.body} #{e.inspect}")
+            raise "Error in request response: #{response.body}"
+          end
+          from = (from +  1.hours)
+        end
+      end
+      log(Logger::INFO, "Completed Requesting Partitioned data for #{method} #{parameters} #{responses}")
+      responses
+    end
+
     # insert_request: Inserts data to Catalyst.
     #
     # data. dict. The field values to insert. See 
@@ -86,8 +123,8 @@ module ROmniture
         log(Logger::INFO, "Report with ID (" + json["reportID"].to_s + ") queued.  Now fetching report...")
         return get_queued_report json["reportID"]
       else
-        log(Logger::ERROR, "Could not queue report.  Omniture returned with error:\n#{response.body}")
-        raise "Could not queue report.  Omniture returned with error:\n#{response.body}"
+        log(Logger::ERROR, "Could not queue report.  Omniture returned with error: #{response.body}")
+        raise "Could not queue report.  Omniture returned with error: #{response.body}"
       end
     end
 
@@ -159,9 +196,9 @@ module ROmniture
             end
             response = HTTPI.post(request)
             if response.code >= 400
-              logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+              logger.error("Request failed and returned with response code: #{response.code} #{response.body}")
               w_gz.close
-              raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
+              raise "Request failed and returned with response code: #{response.code} #{response.body}"
             end
           ensure
             w_gz.close

@@ -149,7 +149,7 @@ module ROmniture
           @logger.info("V4 Report download for #{body} with response code #{response.code}")
           if response.code >= 400
             @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
-            raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
+            raise "Request failed and returned with response code: #{response.code} ==> #{response.body}"
           end
 
           result = JSON.parse(response.body)["report"]
@@ -163,7 +163,7 @@ module ROmniture
             download
           end
       rescue Exception => ex
-        stored_error = ex.backtrace.join("\n")
+        stored_error = ex.backtrace.join("###")
         @logger.info("Exception V4 Report downloading for #{@request.body} #{stored_error} Retrying #{@retries}")
         if (@retries -= 1) >= 0
           sleep 10
