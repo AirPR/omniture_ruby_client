@@ -9,13 +9,17 @@ module ROmniture
   class ReportResponse
 
 
-    def initialize(shared_secret=nil, user_name=nil, request=nil,map_function=nil,gzip_as_str=false)
+    def initialize(shared_secret=nil, user_name=nil, request=nil,map_function=nil,gzip_as_str=false,ignore_header=false)
       @logger = Logger.new(STDOUT)
       @logger.level = Logger::INFO
       @shared_secret = shared_secret
       @username = user_name
       @request = request
       @gzip_as_str = gzip_as_str
+      @ignore_header = ignore_header
+
+      @reportID = JSON.parse(@request.body)["reportID"]
+
       @logger.info("RResponse @gzip_as_str #{@gzip_as_str}")
       # Simply print records if mapping function not provided.
       if map_function.nil?
@@ -44,26 +48,38 @@ module ROmniture
     end
 
     def parse_breakdown(chunk,value)
-      value = value + ["\"#{chunk["name"]}\""]
-      breakdowns =  chunk["breakdown"]
-      counts = chunk["counts"]
-      if counts.present?
-        metric_counts = counts.each_with_index.map do |count, index|
-          if @metric_types[index][:type]=="number" || @metric_types[index][:type]=="currency"
-             @metric_types[index][:decimals]==0 ? count.to_i : count.to_f
-          else
-            count
+      breakdowns=nil
+      begin
+        value = value + ["\"#{chunk["name"]}\""]
+        breakdowns =  chunk["breakdown"]
+        counts = chunk["counts"]
+
+        if counts.present?
+          if @metric_types.length!=counts.length
+            #@logger.info("Invalid metric + count length parse_breakdown for #{@reportID}, metric-len = #{@metric_types.length}, count-len = #{counts.length} @metric_types = #{@metric_types}  counts = #{counts} ")
+            return
+          end
+          metric_counts = counts.each_with_index.map do |count, index|
+            if @metric_types[index][:type]=="number" || @metric_types[index][:type]=="currency"
+               @metric_types[index][:decimals]==0 ? count.to_i : count.to_f
+            else
+              count
+            end
+          end
+          s = value.join(",") +","+ metric_counts.join(",")
+          @csv_rows << s
+          value.pop
+          return
+        end
+        if breakdowns.present?
+          breakdowns.each do |breakdown|
+            parse_breakdown(breakdown,value)
           end
         end
-        s = value.join(",") +","+ metric_counts.join(",")
-        @csv_rows << s
-        value.pop
-        return
-      end
-      if breakdowns.present?
-        breakdowns.each do |breakdown|
-          parse_breakdown(breakdown,value)
-        end
+
+      rescue Exception => ex
+        stored_error = ex.backtrace.join("###")
+        @logger.info("Exception V4 Report parse_breakdown error #{stored_error} in breakdown #{breakdowns} @metric_types  #{@metric_types} counts #{counts} ")
       end
     end
 
@@ -91,13 +107,13 @@ module ROmniture
             @metric_types << {"type": metric["type"], "decimals": metric["decimals"]}
           end
         end
-        @logger.info("V4 Report Headers #{@csv_header}")
+        @logger.info("V4 Report Headers #{@csv_header} for Report #{@reportID} ignore_header #{@ignore_header}")
       end
 
       value = []
       if data.present?
         data.each  do |chunk|
-          if @csv_rows.empty?
+          if @csv_rows.empty? and !@ignore_header
             if chunk["name"].include?("Hour") #Update granularity in header as response doesn't include the report's granularity level type
               @csv_header[0]= "\"Hour\""
             else
@@ -108,7 +124,7 @@ module ROmniture
           parse_breakdown(chunk,value)
         end
       end
-      if @csv_rows.empty? #Just incase the records are empty, we default it to "Hour"
+      if @csv_rows.empty? and !@ignore_header #Just incase the records are empty, we default it to "Hour"
         @csv_header[0]= "\"Hour\""
         @csv_rows << @csv_header.join(",")
       end
@@ -145,21 +161,21 @@ module ROmniture
           request.body = @request.body
           response = HTTPI.post(request)
 
-          body = JSON.parse(request.body)
-          @logger.info("V4 Report download for #{body} with response code #{response.code}")
+
+          @logger.info("V4 Report download for #{@reportID} with response code #{response.code} #{@ignore_header}")
           if response.code >= 400
-            @logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
-            raise "Request failed and returned with response code: #{response.code} ==> #{response.body}"
+            @logger.error("Request failed and returned with response code: #{response.code} => for #{@reportID} => #{response.body}")
+            raise "Request failed and returned with response code: #{response.code} for #{@request.body} => #{response.body}"
           end
 
           result = JSON.parse(response.body)["report"]
-          @logger.info("V4 Report downloaded for #{body}, total pages : #{result["totalPages"]} currentPage: #{@page_count} ")
+          @logger.info("V4 Report downloaded for #{@reportID}, total pages : #{result["totalPages"]} currentPage: #{@page_count} ")
 
           process_chunk(result)
 
-          @logger.info("V4 Report processed for #{body}, total pages : #{result["totalPages"]} currentPage: #{@page_count} ")
-          if @page_count <= result["totalPages"]
-            @request.body = {"reportID" => body["reportID"],"page" => @page_count}.to_json
+          @logger.info("V4 Report processed for #{@reportID} total pages : #{result["totalPages"]} currentPage: #{@page_count} ")
+          if @page_count <= result["totalPages"] and @page_count < 3
+            @request.body = {"reportID" => @reportID,"page" => @page_count}.to_json
             download
           end
       rescue Exception => ex
@@ -184,7 +200,7 @@ module ROmniture
       else
         success = false
           if !@csv_rows.empty?
-            data = CSV.parse(@csv_rows.join("\n"), :headers => true, skip_blanks: true) #TODO try to remove CSV parse and provide direct dicts
+            data = CSV.parse(@csv_rows.join("\n"), :headers => !@ignore_header, skip_blanks: true) #TODO try to remove CSV parse and provide direct dicts
             if !data.empty?
               @map_function.call(data)
             end
