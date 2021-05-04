@@ -174,7 +174,7 @@ module ROmniture
           process_chunk(result)
 
           @logger.info("V4 Report processed for #{@reportID} total pages : #{result["totalPages"]} currentPage: #{@page_count} ")
-          if @page_count <= result["totalPages"] and @page_count < 3
+          if @page_count <= result["totalPages"]
             @request.body = {"reportID" => @reportID,"page" => @page_count}.to_json
             download
           end
