@@ -61,7 +61,7 @@ module ROmniture
           begin
             if counts.present?
               if @metric_types.length!=counts.length
-                @logger.info("Invalid metric + count length parse_breakdown for #{@reportID}, metric-len = #{@metric_types.length}, count-len = #{counts.length} @metric_types = #{@metric_types}  counts = #{counts} ")
+                @logger.info("Invalid metric + count length for Report #{@reportID} page_count=#{@page_count} , metric-len = #{@metric_types.length}, count-len = #{counts.length} @metric_types = #{@metric_types}  counts = #{counts} ")
               else
                 metric_counts = counts.each_with_index.map do |count, index|
                   if @metric_types[index][:type]=="number" || @metric_types[index][:type]=="currency"
@@ -82,13 +82,13 @@ module ROmniture
             end
           rescue Exception => ex
             stored_error = ex.backtrace.join("###")
-            @logger.info("Exception V4 Report parse_breakdown error #{stored_error} in breakdown #{breakdowns} @metric_types  #{@metric_types} counts #{counts} ")
+            @logger.info("Exception V4 Report parse_breakdown for Report #{@reportID} @metric_types  #{@metric_types} counts #{counts} page_count=#{@page_count} error #{stored_error}  in breakdown #{breakdowns}")
             return
           end
         end
       rescue Exception => ex
         stored_error = ex.backtrace.join("###")
-        @logger.info("Exception V4 Report parse_breakdown error #{stored_error} with value v=#{v} ")
+        @logger.info("Exception V4 Report parse_breakdown for Report #{@reportID} error #{stored_error} with value v=#{v} page_count=#{@page_count} ")
         return
       end
     end
@@ -115,7 +115,7 @@ module ROmniture
             else
               @csv_header << "\"#{metric["name"]}\""
             end
-            @metric_types << {"type": metric["type"], "decimals": metric["decimals"]}
+            @metric_types << {"type": metric["type"], "decimals": metric["decimals"], "name": metric["name"]}
           end
         end
         @logger.info("V4 Report Headers #{@csv_header} for Report #{@reportID} ignore_header #{@ignore_header}")
@@ -191,7 +191,7 @@ module ROmniture
           end
       rescue Exception => ex
         stored_error = ex.backtrace.join("###")
-        @logger.info("Exception V4 Report downloading for #{@request.body} #{stored_error} Retrying #{@retries}")
+        @logger.info("Exception V4 Report downloading for for Report #{@reportID}, Retrying #{@retries}, body= #{@request.body}, page_count=#{@page_count} error=#{stored_error}")
         if (@retries -= 1) >= 0
           sleep 10
           retry
