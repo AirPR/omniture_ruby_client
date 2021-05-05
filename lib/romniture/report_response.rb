@@ -47,41 +47,52 @@ module ROmniture
       @wio.string
     end
 
-    def parse_breakdown(chunk,value)
-      breakdowns=nil
+    def parse_breakdown(data_chunk)
+      v = nil
+      stack = [data_chunk]
       begin
-        value = value + ["\"#{chunk["name"]}\""]
-        breakdowns =  chunk["breakdown"]
-        counts = chunk["counts"]
-
-        if counts.present?
-          if @metric_types.length!=counts.length
-            #@logger.info("Invalid metric + count length parse_breakdown for #{@reportID}, metric-len = #{@metric_types.length}, count-len = #{counts.length} @metric_types = #{@metric_types}  counts = #{counts} ")
+        while not stack.empty?
+          v = stack.pop
+          chunk = v[0]
+          value = v[1]
+          breakdowns =  chunk["breakdown"]
+          counts = chunk["counts"]
+          value = value + ["\"#{chunk["name"]}\""]
+          begin
+            if counts.present?
+              if @metric_types.length!=counts.length
+                @logger.info("Invalid metric + count length parse_breakdown for #{@reportID}, metric-len = #{@metric_types.length}, count-len = #{counts.length} @metric_types = #{@metric_types}  counts = #{counts} ")
+              else
+                metric_counts = counts.each_with_index.map do |count, index|
+                  if @metric_types[index][:type]=="number" || @metric_types[index][:type]=="currency"
+                    @metric_types[index][:decimals]==0 ? count.to_i : count.to_f
+                  else
+                    count
+                  end
+                end
+                s = value.join(",") +","+ metric_counts.join(",")
+                @csv_rows << s
+              end
+              value.pop
+            end
+            if breakdowns.present?
+              breakdowns.each do |breakdown|
+                stack.append([breakdown,value])
+              end
+            end
+          rescue Exception => ex
+            stored_error = ex.backtrace.join("###")
+            @logger.info("Exception V4 Report parse_breakdown error #{stored_error} in breakdown #{breakdowns} @metric_types  #{@metric_types} counts #{counts} ")
             return
           end
-          metric_counts = counts.each_with_index.map do |count, index|
-            if @metric_types[index][:type]=="number" || @metric_types[index][:type]=="currency"
-               @metric_types[index][:decimals]==0 ? count.to_i : count.to_f
-            else
-              count
-            end
-          end
-          s = value.join(",") +","+ metric_counts.join(",")
-          @csv_rows << s
-          value.pop
-          return
         end
-        if breakdowns.present?
-          breakdowns.each do |breakdown|
-            parse_breakdown(breakdown,value)
-          end
-        end
-
       rescue Exception => ex
         stored_error = ex.backtrace.join("###")
-        @logger.info("Exception V4 Report parse_breakdown error #{stored_error} in breakdown #{breakdowns} @metric_types  #{@metric_types} counts #{counts} ")
+        @logger.info("Exception V4 Report parse_breakdown error #{stored_error} with value v=#{v} ")
+        return
       end
     end
+
 
     def process_chunk(response)
       data = response["data"]
@@ -121,7 +132,7 @@ module ROmniture
             end
             @csv_rows << @csv_header.join(",")
           end
-          parse_breakdown(chunk,value)
+          parse_breakdown([chunk,value])
         end
       end
       if @csv_rows.empty? and !@ignore_header #Just incase the records are empty, we default it to "Hour"
