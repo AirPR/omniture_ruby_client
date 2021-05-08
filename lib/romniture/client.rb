@@ -6,7 +6,7 @@ module ROmniture
 
     DEFAULT_REPORT_WAIT_TIME = 0.25
     DEFAULT_API_VERSION = "1.3"
-    REPORT_ID = "reportID"
+    REPORT_ID = :reportID
 
     V4_API_VERSION = "1.4"
 
@@ -44,10 +44,61 @@ module ROmniture
         response.body
       rescue Exception => e
         log(Logger::ERROR, e)
-        log(Logger::ERROR, "Error in request response:\n#{response.body}")
-        raise "Error in request response:\n#{response.body}"
+        log(Logger::ERROR, "Error in request response: #{response.body}")
+        raise "Error in request response: #{response.body}"
       end
     end
+
+    def request_partitioned_data(method, parameters = {}, partitioned=false)
+      parameters = parameters.deep_symbolize_keys
+      log(Logger::INFO, "Started Requesting Partitioned data for #{method} #{parameters}")
+      from = parameters[:reportDescription][:dateFrom]
+      to = parameters[:reportDescription][:dateTo]
+      responses = []
+
+      from = from.to_datetime
+      to = to.to_datetime
+
+      no_of_days = (to - from).to_i + 1
+
+      if not partitioned
+        response = send_request(method, parameters)
+        begin
+          response = JSON.parse(response.body)
+          responses.append(response)
+        rescue JSON::ParserError => pe
+          log(Logger::ERROR, pe)
+          responses.append(response.body)
+        rescue Exception => e
+          log(Logger::ERROR, "Error in request response: #{response.body} #{e.inspect}")
+          raise "Error in request response: #{response.body}"
+        end
+      else
+        no_of_days.times do
+          (0..23).each do
+            to = (from +  59.minutes + 59.seconds)
+            parameters[:reportDescription][:dateFrom] = from.strftime('%y-%m-%dT%H:%M:%S')
+            parameters[:reportDescription][:dateTo] = to.strftime('%y-%m-%dT%H:%M:%S')
+            log(Logger::INFO, "Requesting request_partitioned_data #{method} #{parameters}")
+            response = send_request(method, parameters)
+            begin
+              response = JSON.parse(response.body)
+              responses.append(response)
+            rescue JSON::ParserError => pe
+              log(Logger::ERROR, pe)
+              responses.append(response.body)
+            rescue Exception => e
+              log(Logger::ERROR, "Error in request response: #{response.body} #{e.inspect}")
+              raise "Error in request response: #{response.body}"
+            end
+            from = (from +  1.hours)
+          end
+        end
+      end
+      log(Logger::INFO, "Completed Requesting Partitioned data for #{method} #{parameters} #{responses}")
+      responses
+    end
+
     # insert_request: Inserts data to Catalyst.
     #
     # data. dict. The field values to insert. See 
@@ -86,8 +137,8 @@ module ROmniture
         log(Logger::INFO, "Report with ID (" + json["reportID"].to_s + ") queued.  Now fetching report...")
         return get_queued_report json["reportID"]
       else
-        log(Logger::ERROR, "Could not queue report.  Omniture returned with error:\n#{response.body}")
-        raise "Could not queue report.  Omniture returned with error:\n#{response.body}"
+        log(Logger::ERROR, "Could not queue report.  Omniture returned with error: #{response.body}")
+        raise "Could not queue report.  Omniture returned with error: #{response.body}"
       end
     end
 
@@ -123,30 +174,35 @@ module ROmniture
         request.url = url
         ROmniture::DWResponse.new(request, block)
       else
+        url = url.deep_symbolize_keys
         request.url = @environment + "?method=Report.Get"
-        request.body = {REPORT_ID => url['reportID'],:page => 1}.to_json
+        request.body = {REPORT_ID => url[:reportID],:page => 1}.to_json
+
         log(Logger::INFO,"V4 Request #{request.url} : #{request.body}")
+
         ROmniture::ReportResponse.new(@shared_secret, @username, request, block)
       end
     end
 
-    def get_result_as_gzip_str(url, &block)
+    def get_result_as_gzip_str(url, ignore_header, &block)
       generate_nonce
       log(Logger::INFO, "get_result_as_gzip_str Created new nonce: #{@password} for #{url}: #{@api_version}")
       request = HTTPI::Request.new
       if @api_version != V4_API_VERSION
         request.url = url
       else
+        url = url.deep_symbolize_keys
         request.url = @environment + "?method=Report.Get"
         log(Logger::INFO, request.url)
-        request.body = {REPORT_ID => url['reportID'],:page => 1}.to_json
+        request.body = {REPORT_ID => url[:reportID],:page => 1}.to_json
+
       end
       request.headers = request_headers
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
       if V4_API_VERSION == @api_version
-        response = ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true)
+        response = ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true, ignore_header)
         response.get_gzip_data
       else
           wio = StringIO.new("w:bom|utf-8")
@@ -159,9 +215,9 @@ module ROmniture
             end
             response = HTTPI.post(request)
             if response.code >= 400
-              logger.error("Request failed and returned with response code: #{response.code}\n\n#{response.body}")
+              logger.error("Request failed and returned with response code: #{response.code} #{response.body}")
               w_gz.close
-              raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}"
+              raise "Request failed and returned with response code: #{response.code} #{response.body}"
             end
           ensure
             w_gz.close
@@ -294,7 +350,7 @@ module ROmniture
     end
     
     def send_request(method, data)
-      log(Logger::INFO, "Requesting #{method}...")
+      log(Logger::INFO, "Requesting #{method} for #{data}...")
       generate_nonce
       
       log(Logger::INFO, "Created new nonce: #{@password}")
@@ -312,11 +368,11 @@ module ROmniture
       response = HTTPI.post(request)
       
       if response.code >= 400 and @version=='1.3'
-        log(Logger::ERROR, "Request failed and returned with response code: #{response.code}\n\n#{response.body}")
-        raise "Request failed and returned with response code: #{response.code}\n\n#{response.body}" 
+        log(Logger::ERROR, "Request failed and returned with response code: #{response.code} #{response.body}")
+        raise "Request failed and returned with response code: #{response.code} #{response.body}"
       end
       if response.code >= 400
-        log(Logger::INFO, "Request failed and responded with response code #{response.code}\n#{response.body}")
+        log(Logger::INFO, "Request failed and responded with response code #{response.code} #{response.body}")
       end
       log(Logger::INFO, "Server responded with response code #{response.code}")
       response
