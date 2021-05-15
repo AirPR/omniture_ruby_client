@@ -357,6 +357,8 @@ module ROmniture
       
       request = HTTPI::Request.new
 
+      request.read_timeout=300
+
       if @verify_mode
         request.auth.ssl.verify_mode = @verify_mode
       end
