@@ -77,8 +77,9 @@ module ROmniture
         no_of_days.times do
           (0..23).each do
             to = (from +  59.minutes + 59.seconds)
-            parameters[:reportDescription][:dateFrom] = from.strftime('%y-%m-%dT%H:%M:%S')
-            parameters[:reportDescription][:dateTo] = to.strftime('%y-%m-%dT%H:%M:%S')
+            parameters[:reportDescription][:dateFrom] = from.strftime('%Y-%m-%d %H:%M:%S')
+            parameters[:reportDescription][:dateTo] = to.strftime('%Y-%m-%d %H:%M:%S')
+            parameters[:reportDescription][:fuzzyDates] = false
             log(Logger::INFO, "Requesting request_partitioned_data #{method} #{parameters}")
             response = send_request(method, parameters)
             begin
