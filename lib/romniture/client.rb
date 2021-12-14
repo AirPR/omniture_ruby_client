@@ -49,7 +49,7 @@ module ROmniture
       end
     end
 
-    def request_partitioned_data(method, parameters = {}, partitioned=false)
+    def request_partitioned_data(method, parameters = {}, is_partitioned=false, partition=0)
       parameters = parameters.deep_symbolize_keys
       log(Logger::INFO, "Started Requesting Partitioned data for #{method} #{parameters}")
       from = parameters[:reportDescription][:dateFrom]
@@ -61,7 +61,7 @@ module ROmniture
 
       no_of_days = (to - from).to_i + 1
 
-      if not partitioned
+      if not is_partitioned
         response = send_request(method, parameters)
         begin
           response = JSON.parse(response.body)
@@ -74,27 +74,44 @@ module ROmniture
           raise "Error in request response: #{response.body}"
         end
       else
-        no_of_days.times do
-          (0..23).each do
-            to = (from +  59.minutes + 59.seconds)
-            parameters[:reportDescription][:dateFrom] = from.strftime('%Y-%m-%d %H:%M:%S')
-            parameters[:reportDescription][:dateTo] = to.strftime('%Y-%m-%d %H:%M:%S')
-            parameters[:reportDescription][:fuzzyDates] = false
-            log(Logger::INFO, "Requesting request_partitioned_data #{method} #{parameters}")
-            response = send_request(method, parameters)
-            begin
-              response = JSON.parse(response.body)
-              responses.append(response)
-            rescue JSON::ParserError => pe
-              log(Logger::ERROR, pe)
-              responses.append(response.body)
-            rescue Exception => e
-              log(Logger::ERROR, "Error in request response: #{response.body} #{e.inspect}")
-              raise "Error in request response: #{response.body}"
-            end
-            from = (from +  1.hours)
-          end
+        from = (from +  (partition).hours)
+        to = (from +  59.minutes + 59.seconds)
+        parameters[:reportDescription][:dateFrom] = from.strftime('%Y-%m-%d %H:%M:%S')
+        parameters[:reportDescription][:dateTo] = to.strftime('%Y-%m-%d %H:%M:%S')
+        parameters[:reportDescription][:fuzzyDates] = false
+        log(Logger::INFO, "Requesting request_partitioned_data #{method} #{parameters} for partition #{partition}")
+        response = send_request(method, parameters)
+        begin
+          response = JSON.parse(response.body)
+          responses.append(response)
+        rescue JSON::ParserError => pe
+          log(Logger::ERROR, pe)
+          responses.append(response.body)
+        rescue Exception => e
+          log(Logger::ERROR, "Error in request response: #{response.body} #{e.inspect}")
+          raise "Error in request response: #{response.body}"
         end
+        # no_of_days.times do
+        #   (0..23).each do
+        #     to = (from +  59.minutes + 59.seconds)
+        #     parameters[:reportDescription][:dateFrom] = from.strftime('%Y-%m-%d %H:%M:%S')
+        #     parameters[:reportDescription][:dateTo] = to.strftime('%Y-%m-%d %H:%M:%S')
+        #     parameters[:reportDescription][:fuzzyDates] = false
+        #     log(Logger::INFO, "Requesting request_partitioned_data #{method} #{parameters}")
+        #     response = send_request(method, parameters)
+        #     begin
+        #       response = JSON.parse(response.body)
+        #       responses.append(response)
+        #     rescue JSON::ParserError => pe
+        #       log(Logger::ERROR, pe)
+        #       responses.append(response.body)
+        #     rescue Exception => e
+        #       log(Logger::ERROR, "Error in request response: #{response.body} #{e.inspect}")
+        #       raise "Error in request response: #{response.body}"
+        #     end
+        #     from = (from +  1.hours)
+        #   end
+        # end
       end
       log(Logger::INFO, "Completed Requesting Partitioned data for #{method} #{parameters} #{responses}")
       responses
