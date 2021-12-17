@@ -51,7 +51,7 @@ module ROmniture
 
     def request_partitioned_data(method, parameters = {}, is_partitioned=false, partition=0)
       parameters = parameters.deep_symbolize_keys
-      log(Logger::INFO, "Started Requesting Partitioned data for #{method} #{parameters}")
+      log(Logger::INFO, "Started Requesting Partitioned data for #{method} #{parameters} is_partitioned #{is_partitioned} partition #{partition}")
       from = parameters[:reportDescription][:dateFrom]
       to = parameters[:reportDescription][:dateTo]
       responses = []
