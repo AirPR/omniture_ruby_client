@@ -91,27 +91,6 @@ module ROmniture
           log(Logger::ERROR, "Error in request response: #{response.body} #{e.inspect}")
           raise "Error in request response: #{response.body}"
         end
-        # no_of_days.times do
-        #   (0..23).each do
-        #     to = (from +  59.minutes + 59.seconds)
-        #     parameters[:reportDescription][:dateFrom] = from.strftime('%Y-%m-%d %H:%M:%S')
-        #     parameters[:reportDescription][:dateTo] = to.strftime('%Y-%m-%d %H:%M:%S')
-        #     parameters[:reportDescription][:fuzzyDates] = false
-        #     log(Logger::INFO, "Requesting request_partitioned_data #{method} #{parameters}")
-        #     response = send_request(method, parameters)
-        #     begin
-        #       response = JSON.parse(response.body)
-        #       responses.append(response)
-        #     rescue JSON::ParserError => pe
-        #       log(Logger::ERROR, pe)
-        #       responses.append(response.body)
-        #     rescue Exception => e
-        #       log(Logger::ERROR, "Error in request response: #{response.body} #{e.inspect}")
-        #       raise "Error in request response: #{response.body}"
-        #     end
-        #     from = (from +  1.hours)
-        #   end
-        # end
       end
       log(Logger::INFO, "Completed Requesting Partitioned data for #{method} #{parameters} #{responses}")
       responses
