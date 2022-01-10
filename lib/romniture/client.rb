@@ -38,7 +38,11 @@ module ROmniture
       response = send_request(method, parameters)
 
       begin
-        JSON.parse(response.body)
+        if method == "Report.Get" and @api_version == V4_API_VERSION and response.code == 200 # Data is ready, DO NOT parse the response
+          JSON.parse({ "report": {} })
+        else
+          JSON.parse(response.body)
+        end
       rescue JSON::ParserError => pe
         log(Logger::ERROR, pe)
         response.body
