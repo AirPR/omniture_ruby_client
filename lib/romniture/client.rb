@@ -39,7 +39,7 @@ module ROmniture
 
       begin
         if method == "Report.Get" and @api_version == V4_API_VERSION and response.code == 200 # Data is ready, DO NOT parse the response
-          JSON.parse({ "report": {} })
+          JSON.parse("{ \"report\": {} }")
         else
           JSON.parse(response.body)
         end
