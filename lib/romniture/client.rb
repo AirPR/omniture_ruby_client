@@ -40,6 +40,8 @@ module ROmniture
       begin
         if method == "Report.Get" and @api_version == V4_API_VERSION and response.code == 200 # Data is ready, DO NOT parse the response
           JSON.parse("{ \"report\": {} }")
+        elsif (method == "Report.Get" ||  method == "Report.Queue") and @api_version == V4_API_VERSION and response.code == 500 # Adobe gives 500 error for unknown reasons, so we will re-initiate the request
+            JSON.parse("{ \"error\": \"500\" }")
         else
           JSON.parse(response.body)
         end
@@ -86,6 +88,9 @@ module ROmniture
         log(Logger::INFO, "Requesting request_partitioned_data #{method} #{parameters} for partition #{partition}")
         response = send_request(method, parameters)
         begin
+          if response.code == 500
+            raise "Warehouse Exception => #{response.body}"
+          end
           response = JSON.parse(response.body)
           responses.append(response)
         rescue JSON::ParserError => pe
