@@ -8,7 +8,7 @@ module ROmniture
 
   class ReportResponse
 
-    def initialize(shared_secret=nil, user_name=nil, iss=nil, sub=nil, api_key=nil, private_key=nil, client_id=nil, client_secret=nil, request=nil,map_function=nil,gzip_as_str=false,ignore_header=false)
+    def initialize(shared_secret=nil, user_name=nil, iss=nil, sub=nil, api_key=nil, private_key=nil, client_secret=nil, request=nil,map_function=nil,gzip_as_str=false,ignore_header=false)
       @logger = Logger.new(STDOUT)
       @logger.level = Logger::INFO
       @shared_secret = shared_secret
@@ -20,7 +20,6 @@ module ROmniture
       @sub = sub
       @api_key = api_key
       @private_key = private_key
-      @client_id = client_id
       @client_secret = client_secret
 
       @reportID = JSON.parse(@request.body)["reportID"]
@@ -148,6 +147,9 @@ module ROmniture
     end
 
     def generate_nonce
+      if @iss.present? and @sub.present?
+        return
+      end
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
       tz_aware_local_date = Time.zone.now
       utc_date            = tz_aware_local_date.utc
@@ -158,23 +160,28 @@ module ROmniture
     end
 
     def request_bearer_token
-      payload = {"exp": (DateTime.now() + 1.minute).to_i,"iss": @iss,
-                 "sub": @sub,
+      payload = {"exp":(DateTime.now() + 1.minute).to_i,
+                 "iss": @iss,
+                 "sub":@sub,
                  "https://ims-na1.adobelogin.com/s/ent_analytics_bulk_ingest_sdk":true,
-                 "aud": "https://ims-na1.adobelogin.com/c/#{@api_key}"}
+                 "aud":"https://ims-na1.adobelogin.com/c/#{@api_key}"}
+      rsa_private = OpenSSL::PKey::RSA.new(@private_key)
+      jwt_token = JWT.encode payload, rsa_private, 'RS256'
 
-      jwt_token = JWT.encode payload, @private_key, 'RS256'
       url = "https://ims-na1.adobelogin.com/ims/exchange/jwt"
       request = HTTPI::Request.new
       request.read_timeout=300
       request.url = url
-      request.content_type = 'application/x-www-form-urlencoded'
-      request.set_form_data('client_id' => "#{@client_id}", "client_secret" => "#{@client_secret}", "jwt_token" => "#{jwt_token}")
+      request.headers = {
+        "Content-Type" => "application/x-www-form-urlencoded"
+      }
+      request.query={'client_id' => "#{@api_key}", "client_secret" => "#{@client_secret}", "jwt_token" => "#{jwt_token}"}
       response = HTTPI.post(request)
       if response.code != 200
         log(Logger::ERROR, "JWT Request failed and returned with response code: #{response.code} #{response.body}")
+        raise "JWT Request failed and returned with response code: #{response.code} #{response.body}"
       end
-      response.body
+      JSON.parse(response.body)["access_token"]
     end
 
     def request_headers

@@ -25,7 +25,6 @@ module ROmniture
       @sub = options[:sub]
       @api_key = options[:api_key]
       @private_key = options[:private_key]
-      @client_id = options[:client_id]
       @client_secret = options[:client_secret]
     end
 
@@ -186,7 +185,7 @@ module ROmniture
         request.body = {REPORT_ID => url[:reportID],:page => 1}.to_json
 
         log(Logger::INFO,"V4 Request #{request.url} : #{request.body}")
-        ROmniture::ReportResponse.new(@shared_secret, @username, @iss, @sub, @api_key, @private_key, @client_id, @client_secret, request, block)
+        ROmniture::ReportResponse.new(@shared_secret, @username, @iss, @sub, @api_key, @private_key, @client_secret, request, block)
       end
     end
 
@@ -358,7 +357,7 @@ module ROmniture
     def send_request(method, data)
       log(Logger::INFO, "Requesting #{method} for #{data}...")
       generate_nonce
-      
+
       log(Logger::INFO, "Created new nonce: #{@password}")
       
       request = HTTPI::Request.new
@@ -387,6 +386,9 @@ module ROmniture
     end
     
     def generate_nonce
+      if @iss.present? and @sub.present?
+        return
+      end
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
       case @api_version
       when "1.3"
@@ -407,18 +409,23 @@ module ROmniture
                  "sub":@sub,
                  "https://ims-na1.adobelogin.com/s/ent_analytics_bulk_ingest_sdk":true,
                  "aud":"https://ims-na1.adobelogin.com/c/#{@api_key}"}
-      jwt_token = JWT.encode payload, @private_key, 'RS256'
+      rsa_private = OpenSSL::PKey::RSA.new(@private_key)
+      jwt_token = JWT.encode payload, rsa_private, 'RS256'
+
       url = "https://ims-na1.adobelogin.com/ims/exchange/jwt"
       request = HTTPI::Request.new
       request.read_timeout=300
       request.url = url
-      request.content_type = 'application/x-www-form-urlencoded'
-      request.set_form_data('client_id' => "#{@client_id}", "client_secret" => "#{@client_secret}", "jwt_token" => "#{jwt_token}")
+      request.headers = {
+        "Content-Type" => "application/x-www-form-urlencoded"
+      }
+      request.query={'client_id' => "#{@api_key}", "client_secret" => "#{@client_secret}", "jwt_token" => "#{jwt_token}"}
       response = HTTPI.post(request)
       if response.code != 200
         log(Logger::ERROR, "JWT Request failed and returned with response code: #{response.code} #{response.body}")
+        raise "JWT Request failed and returned with response code: #{response.code} #{response.body}"
       end
-      response.body
+      JSON.parse(response.body)["access_token"]
     end
 
     def request_headers
