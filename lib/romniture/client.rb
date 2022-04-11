@@ -21,6 +21,11 @@ module ROmniture
       #@insert_url     = "https://airpr.d1.sc.omtrdc.net/b/ss/airprptnrdev/6/"
       @insert_url     = ''
       HTTPI.log       = true
+      @iss = options[:iss]
+      @sub = options[:sub]
+      @api_key = options[:api_key]
+      @private_key = options[:private_key]
+      @client_secret = options[:client_secret]
     end
 
     def environments
@@ -180,8 +185,7 @@ module ROmniture
         request.body = {REPORT_ID => url[:reportID],:page => 1}.to_json
 
         log(Logger::INFO,"V4 Request #{request.url} : #{request.body}")
-
-        ROmniture::ReportResponse.new(@shared_secret, @username, request, block)
+        ROmniture::ReportResponse.new(@shared_secret, @username, @iss, @sub, @api_key, @private_key, @client_secret, request, block)
       end
     end
 
@@ -203,7 +207,7 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
       if V4_API_VERSION == @api_version
-        response = ROmniture::ReportResponse.new(@shared_secret, @username, request, block, true, ignore_header)
+        response = ROmniture::ReportResponse.new(@shared_secret, @username, @iss, @sub, @api_key, @private_key, @client_secret, request, block, true, ignore_header)
         response.get_gzip_data
       else
           wio = StringIO.new("w:bom|utf-8")
@@ -353,7 +357,7 @@ module ROmniture
     def send_request(method, data)
       log(Logger::INFO, "Requesting #{method} for #{data}...")
       generate_nonce
-      
+
       log(Logger::INFO, "Created new nonce: #{@password}")
       
       request = HTTPI::Request.new
@@ -375,13 +379,16 @@ module ROmniture
         raise "Request failed and returned with response code: #{response.code} #{response.body}"
       end
       if response.code >= 400
-        log(Logger::INFO, "Request failed and responded with response code #{response.code} #{response.body}")
+        log(Logger::ERROR, "Request failed and responded with response code #{response.code} #{response.body}")
       end
       log(Logger::INFO, "Server responded with response code #{response.code}")
       response
     end
     
     def generate_nonce
+      if @iss.present? and @sub.present?
+        return
+      end
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
       case @api_version
       when "1.3"
@@ -396,11 +403,43 @@ module ROmniture
       @password       = Base64.encode64(sha1_string).to_s.chomp("\n")
     end    
 
-    def request_headers 
-      {
-        "X-WSSE" => "UsernameToken Username=\"#{@username}\", PasswordDigest=\"#{@password}\", Nonce=\"#{@nonce}\", Created=\"#{@created}\"",
-        'Content-Type' => 'application/json'   #Added by ROB on 2013-08-22 because the Adobe Social API seems to require this be set
+    def request_bearer_token
+      payload = {"exp":(DateTime.now() + 1.minute).to_i,
+                  "iss": @iss,
+                 "sub":@sub,
+                 "https://ims-na1.adobelogin.com/s/ent_analytics_bulk_ingest_sdk":true,
+                 "aud":"https://ims-na1.adobelogin.com/c/#{@api_key}"}
+      rsa_private = OpenSSL::PKey::RSA.new(@private_key)
+      jwt_token = JWT.encode payload, rsa_private, 'RS256'
+
+      url = "https://ims-na1.adobelogin.com/ims/exchange/jwt"
+      request = HTTPI::Request.new
+      request.read_timeout=300
+      request.url = url
+      request.headers = {
+        "Content-Type" => "application/x-www-form-urlencoded"
       }
+      request.query={'client_id' => "#{@api_key}", "client_secret" => "#{@client_secret}", "jwt_token" => "#{jwt_token}"}
+      response = HTTPI.post(request)
+      if response.code != 200
+        log(Logger::ERROR, "JWT Request failed and returned with response code: #{response.code} #{response.body}")
+        raise "JWT Request failed and returned with response code: #{response.code} #{response.body}"
+      end
+      JSON.parse(response.body)["access_token"]
+    end
+
+    def request_headers
+      if @iss.present? and @sub.present?
+        token = request_bearer_token
+        {
+          "Authorization" => "Bearer #{token}"
+        }
+      else
+        {
+          "X-WSSE" => "UsernameToken Username=\"#{@username}\", PasswordDigest=\"#{@password}\", Nonce=\"#{@nonce}\", Created=\"#{@created}\"",
+          'Content-Type' => 'application/json'   #Added by ROB on 2013-08-22 because the Adobe Social API seems to require this be set
+        }
+      end
     end
     
     def get_queued_report(report_id)
