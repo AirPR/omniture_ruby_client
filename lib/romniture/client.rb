@@ -58,7 +58,8 @@ module ROmniture
       end
     end
 
-    def request_partitioned_data(method, parameters = {}, is_partitioned=false, partition=0, total_partitions=1)
+    # default to hourly partition (24)
+    def request_partitioned_data(method, parameters = {}, is_partitioned=false, partition=0, total_partitions=24)
       parameters = parameters.deep_symbolize_keys
       log(Logger::INFO, "Started Requesting Partitioned data for #{method} #{parameters} is_partitioned #{is_partitioned} partition #{partition}")
       from = parameters[:reportDescription][:dateFrom]
