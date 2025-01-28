@@ -27,6 +27,7 @@ module ROmniture
       @private_key = options[:private_key]
       @client_secret = options[:client_secret]
       @scope = options[:scope]
+      log(Logger::INFO, "Scope: #{@scope}")
     end
 
     def environments
@@ -396,7 +397,7 @@ module ROmniture
     end
 
     def generate_nonce
-      if @iss.present? and @sub.present?
+      if (@iss.present? and @sub.present?) || @scope.present?
         return
       end
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
@@ -449,8 +450,8 @@ module ROmniture
       request.query = {'client_id' => "#{@api_key}", "client_secret" => "#{@client_secret}", "grant_type" => "client_credentials", "scope" => "#{@scope}"}
       response = HTTPI.post(request)
       if response.code != 200
-        log(Logger::ERROR, "JWT Request failed and returned with response code: #{response.code} #{response.body}")
-        raise "JWT Request failed and returned with response code: #{response.code} #{response.body}"
+        log(Logger::ERROR, "Oauth Request failed and returned with response code: #{response.code} #{response.body}")
+        raise "Oauth Request failed and returned with response code: #{response.code} #{response.body}"
       end
       JSON.parse(response.body)["access_token"]
     end

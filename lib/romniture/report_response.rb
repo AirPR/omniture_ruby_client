@@ -148,7 +148,7 @@ module ROmniture
     end
 
     def generate_nonce
-      if @iss.present? and @sub.present?
+      if (@iss.present? and @sub.present?) || @scope.present?
         return
       end
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
