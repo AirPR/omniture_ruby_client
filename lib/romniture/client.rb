@@ -26,6 +26,8 @@ module ROmniture
       @api_key = options[:api_key]
       @private_key = options[:private_key]
       @client_secret = options[:client_secret]
+      @scope = options[:scope]
+      log(Logger::INFO, "Scope: #{@scope}")
     end
 
     def environments
@@ -185,7 +187,7 @@ module ROmniture
         request.body = {REPORT_ID => url[:reportID],:page => 1}.to_json
 
         log(Logger::INFO,"V4 Request #{request.url} : #{request.body}")
-        ROmniture::ReportResponse.new(@shared_secret, @username, @iss, @sub, @api_key, @private_key, @client_secret, request, block)
+        ROmniture::ReportResponse.new(@shared_secret, @username, @iss, @sub, @api_key, @private_key, @client_secret, @scope, request, block)
       end
     end
 
@@ -207,7 +209,7 @@ module ROmniture
         request.auth.ssl.verify_mode = @verify_mode
       end
       if V4_API_VERSION == @api_version
-        response = ROmniture::ReportResponse.new(@shared_secret, @username, @iss, @sub, @api_key, @private_key, @client_secret, request, block, true, ignore_header)
+        response = ROmniture::ReportResponse.new(@shared_secret, @username, @iss, @sub, @api_key, @private_key, @client_secret, @scope, request, block, true, ignore_header)
         response.get_gzip_data
       else
           wio = StringIO.new("w:bom|utf-8")
@@ -395,7 +397,7 @@ module ROmniture
     end
 
     def generate_nonce
-      if @iss.present? and @sub.present?
+      if (@iss.present? and @sub.present?) || @scope.present?
         return
       end
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
@@ -437,11 +439,35 @@ module ROmniture
       JSON.parse(response.body)["access_token"]
     end
 
+    def request_bearer_token_oauth
+      url = 'https://ims-na1.adobelogin.com/ims/token/v3'
+      request = HTTPI::Request.new
+      request.read_timeout=300
+      request.url = url
+      request.headers = {
+        "Content-Type" => "application/x-www-form-urlencoded"
+      }
+      request.query = {'client_id' => "#{@api_key}", "client_secret" => "#{@client_secret}", "grant_type" => "client_credentials", "scope" => "#{@scope}"}
+      response = HTTPI.post(request)
+      if response.code != 200
+        log(Logger::ERROR, "Oauth Request failed and returned with response code: #{response.code} #{response.body}")
+        raise "Oauth Request failed and returned with response code: #{response.code} #{response.body}"
+      end
+      JSON.parse(response.body)["access_token"]
+    end
+
     def request_headers
       if @iss.present? and @sub.present?
         token = request_bearer_token
         {
           "Authorization" => "Bearer #{token}"
+        }
+      #oauth headers from Jan 2025  
+      elsif @scope.present?
+        token = request_bearer_token_oauth
+        {
+          "Authorization" => "Bearer #{token}",
+          "x-api-key" => @api_key
         }
       else
         {

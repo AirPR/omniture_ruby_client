@@ -8,7 +8,7 @@ module ROmniture
 
   class ReportResponse
 
-    def initialize(shared_secret=nil, user_name=nil, iss=nil, sub=nil, api_key=nil, private_key=nil, client_secret=nil, request=nil,map_function=nil,gzip_as_str=false,ignore_header=false)
+    def initialize(shared_secret=nil, user_name=nil, iss=nil, sub=nil, api_key=nil, private_key=nil, client_secret=nil, scope=nil, request=nil,map_function=nil,gzip_as_str=false,ignore_header=false)
       @logger = Logger.new(STDOUT)
       @logger.level = Logger::INFO
       @shared_secret = shared_secret
@@ -21,6 +21,7 @@ module ROmniture
       @api_key = api_key
       @private_key = private_key
       @client_secret = client_secret
+      @scope = scope
 
       @reportID = JSON.parse(@request.body)["reportID"]
 
@@ -147,7 +148,7 @@ module ROmniture
     end
 
     def generate_nonce
-      if @iss.present? and @sub.present?
+      if (@iss.present? and @sub.present?) || @scope.present?
         return
       end
       @nonce          = Digest::MD5.new.hexdigest(rand().to_s)
@@ -184,11 +185,35 @@ module ROmniture
       JSON.parse(response.body)["access_token"]
     end
 
+    def request_bearer_token_oauth
+      url = 'https://ims-na1.adobelogin.com/ims/token/v3'
+      request = HTTPI::Request.new
+      request.read_timeout=300
+      request.url = url
+      request.headers = {
+        "Content-Type" => "application/x-www-form-urlencoded"
+      }
+      request.query = {'client_id' => "#{@api_key}", "client_secret" => "#{@client_secret}", "grant_type" => "client_credentials", "scope" => "#{@scope}"}
+      response = HTTPI.post(request)
+      if response.code != 200
+        log(Logger::ERROR, "JWT Request failed and returned with response code: #{response.code} #{response.body}")
+        raise "JWT Request failed and returned with response code: #{response.code} #{response.body}"
+      end
+      JSON.parse(response.body)["access_token"]
+    end
+
     def request_headers
       if @iss.present? and @sub.present?
         token = request_bearer_token
         {
           "Authorization" => "Bearer #{token}"
+        }
+       #oauth headers from Jan 2025  
+      elsif @scope.present?
+        token = request_bearer_token_oauth
+        {
+          "Authorization" => "Bearer #{token}",
+          "x-api-key" => @api_key
         }
       else
         {
