@@ -1,5 +1,6 @@
 require "romniture/version"
 require "romniture/client"
+require "romniture/client_factory"
 require "romniture/exceptions"
 require "romniture/visitorid"
 require "romniture/dwresponse"
