@@ -4,6 +4,8 @@ module ROmniture
       DEFAULT_API_BASE_URL = "https://analytics.adobe.io/api/"
 
       def initialize(base_client, options = {})
+        raise ArgumentError, "base_client is required for V2 client" if base_client.nil?
+
         @base = base_client
         @verify_mode = options[:verify_mode] ? options[:verify_mode] : false
         @api_key = options[:api_key]
