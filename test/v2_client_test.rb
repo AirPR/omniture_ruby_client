@@ -51,10 +51,12 @@ class V2ClientTest < Minitest::Test
 
   def setup
     @original_httpi_post = HTTPI.method(:post)
+    @original_httpi_get = HTTPI.method(:get)
   end
 
   def teardown
     HTTPI.singleton_class.send(:define_method, :post, @original_httpi_post)
+    HTTPI.singleton_class.send(:define_method, :get, @original_httpi_get)
   end
 
   def test_initialize_requires_base_client
@@ -166,5 +168,29 @@ class V2ClientTest < Minitest::Test
     end
 
     assert_match("missing itemId", error.message)
+  end
+
+  def test_request_get_uses_query_parameters
+    fake_base = FakeBase.new
+    captured = {}
+
+    HTTPI.singleton_class.send(:define_method, :get) do |request|
+      captured[:url] = request.url
+      captured[:query] = request.query
+      captured[:headers] = request.headers
+      OpenStruct.new(code: 200, body: '[{"id":"metrics/event1","name":"Event 1"}]')
+    end
+
+    client = ROmniture::Client::V2.new(
+      fake_base,
+      scope: "analytics_bulk_ingest",
+      api_key: "test-key",
+      global_company_id: "myCompany"
+    )
+
+    response = client.request_get("metrics", {"rsid" => "suite"})
+
+    assert_equal "https://analytics.adobe.io/api/myCompany/metrics?rsid=suite", captured[:url].to_s
+    assert_equal "metrics/event1", response.first["id"]
   end
 end

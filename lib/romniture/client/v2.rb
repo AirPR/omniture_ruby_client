@@ -27,6 +27,17 @@ module ROmniture
         end
       end
 
+      def request_get(endpoint, parameters = {})
+        response = send_get_request(endpoint, parameters)
+
+        begin
+          JSON.parse(response.body)
+        rescue JSON::ParserError => pe
+          @base.send(:log, Logger::ERROR, pe)
+          response.body
+        end
+      end
+
       def get_report(endpoint, parameters = {})
         if endpoint.to_s.start_with?("Report.")
           raise NotImplementedError, "V2 client does not support Report.Queue* flow. Use #request with 2.0 endpoints."
@@ -96,6 +107,28 @@ module ROmniture
         response
       end
 
+      def send_get_request(endpoint, params)
+        @base.send(:log, Logger::INFO, "[v2] GET #{endpoint} with #{params}...")
+
+        request = HTTPI::Request.new
+        request.read_timeout = 300
+        request.auth.ssl.verify_mode = @verify_mode if @verify_mode
+
+        request.url = normalized_v2_url(endpoint)
+        request.headers = request_headers
+        request.query = params if params.respond_to?(:empty?) ? !params.empty? : params
+
+        response = HTTPI.get(request)
+
+        if response.code >= 400
+          @base.send(:log, Logger::ERROR, "[v2] GET failed with response code #{response.code} #{response.body}")
+          raise "[v2] GET failed with response code #{response.code} #{response.body}"
+        end
+
+        @base.send(:log, Logger::INFO, "[v2] Server responded with response code #{response.code}")
+        response
+      end
+
       def validate_report_breakdown_filters!(endpoint, data)
         return unless endpoint.to_s.end_with?("/reports") || endpoint.to_s.end_with?("reports")
         return unless data.is_a?(Hash)
@@ -145,8 +178,8 @@ module ROmniture
       end
 
       def v2_access_token
-        return @base.send(:request_bearer_token_oauth) if @scope.present?
         return @base.send(:request_bearer_token) if @iss.present? && @sub.present?
+        return @base.send(:request_bearer_token_oauth) if @scope.present?
 
         raise ArgumentError, "V2 client requires OAuth scope or JWT credentials (iss/sub)."
       end
