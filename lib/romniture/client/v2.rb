@@ -38,6 +38,17 @@ module ROmniture
         end
       end
 
+      def request_put(endpoint, parameters = {})
+        response = send_put_request(endpoint, parameters)
+
+        begin
+          JSON.parse(response.body)
+        rescue JSON::ParserError => pe
+          @base.send(:log, Logger::ERROR, pe)
+          response.body
+        end
+      end
+
       def get_report(endpoint, parameters = {})
         if endpoint.to_s.start_with?("Report.")
           raise NotImplementedError, "V2 client does not support Report.Queue* flow. Use #request with 2.0 endpoints."
@@ -59,6 +70,35 @@ module ROmniture
         end
 
         get_report(endpoint, payload)
+      end
+
+      # Data Warehouse v2 helpers.
+      def create_data_warehouse_scheduled_request(payload)
+        request(default_data_warehouse_scheduled_endpoint, payload)
+      end
+
+      def get_data_warehouse_scheduled_requests(parameters = {})
+        request_get(default_data_warehouse_scheduled_endpoint, parameters)
+      end
+
+      def get_data_warehouse_scheduled_request(uuid)
+        request_get("#{default_data_warehouse_scheduled_endpoint}/#{uuid}", {})
+      end
+
+      def update_data_warehouse_scheduled_request(uuid, payload)
+        request_put("#{default_data_warehouse_scheduled_endpoint}/#{uuid}", payload)
+      end
+
+      def get_data_warehouse_reports(parameters = {})
+        request_get(default_data_warehouse_report_endpoint, parameters)
+      end
+
+      def get_data_warehouse_report(report_uuid)
+        request_get("#{default_data_warehouse_report_endpoint}/#{report_uuid}", {})
+      end
+
+      def update_data_warehouse_report(report_uuid, payload)
+        request_put("#{default_data_warehouse_report_endpoint}/#{report_uuid}", payload)
       end
 
       # Keep method surface compatible for callers switching by flags.
@@ -129,6 +169,27 @@ module ROmniture
         response
       end
 
+      def send_put_request(endpoint, data)
+        @base.send(:log, Logger::INFO, "[v2] PUT #{endpoint} for #{data}...")
+
+        request = HTTPI::Request.new
+        request.read_timeout = 300
+        request.auth.ssl.verify_mode = @verify_mode if @verify_mode
+
+        request.url = normalized_v2_url(endpoint)
+        request.headers = request_headers
+        request.body = data.to_json
+        response = HTTPI.put(request)
+
+        if response.code >= 400
+          @base.send(:log, Logger::ERROR, "[v2] PUT failed with response code #{response.code} #{response.body}")
+          raise "[v2] PUT failed with response code #{response.code} #{response.body}"
+        end
+
+        @base.send(:log, Logger::INFO, "[v2] Server responded with response code #{response.code}")
+        response
+      end
+
       def validate_report_breakdown_filters!(endpoint, data)
         return unless endpoint.to_s.end_with?("/reports") || endpoint.to_s.end_with?("reports")
         return unless data.is_a?(Hash)
@@ -188,6 +249,18 @@ module ROmniture
         raise ArgumentError, "global_company_id is required for V2 get_reports(payload)." if @global_company_id.to_s.strip.empty?
 
         "/#{@global_company_id}/reports"
+      end
+
+      def default_data_warehouse_scheduled_endpoint
+        raise ArgumentError, "global_company_id is required for V2 Data Warehouse endpoints." if @global_company_id.to_s.strip.empty?
+
+        "/#{@global_company_id}/data_warehouse/scheduled"
+      end
+
+      def default_data_warehouse_report_endpoint
+        raise ArgumentError, "global_company_id is required for V2 Data Warehouse endpoints." if @global_company_id.to_s.strip.empty?
+
+        "/#{@global_company_id}/data_warehouse/report"
       end
     end
   end
