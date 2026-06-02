@@ -7,33 +7,47 @@ PATH
       curb
       httpi
       json
+      jwt
       minitest
 
 GEM
   remote: http://rubygems.org/
   specs:
-    activesupport (6.0.3.1)
+    activesupport (7.1.6)
+      base64
+      benchmark (>= 0.3)
+      bigdecimal
       concurrent-ruby (~> 1.0, >= 1.0.2)
-      i18n (>= 0.7, < 2)
-      minitest (~> 5.1)
-      tzinfo (~> 1.1)
-      zeitwerk (~> 2.2, >= 2.2.2)
-    builder (3.2.4)
-    concurrent-ruby (1.1.6)
-    curb (0.9.10)
-    httpi (2.4.4)
+      connection_pool (>= 2.2.5)
+      drb
+      i18n (>= 1.6, < 2)
+      logger (>= 1.4.2)
+      minitest (>= 5.1)
+      mutex_m
+      securerandom (>= 0.3)
+      tzinfo (~> 2.0)
+    base64 (0.3.0)
+    benchmark (0.5.0)
+    bigdecimal (4.1.2)
+    builder (3.3.0)
+    concurrent-ruby (1.3.6)
+    connection_pool (2.5.5)
+    curb (1.3.5)
+    drb (2.2.3)
+    httpi (3.0.1)
       rack
-      socksify
-    i18n (1.8.3)
+    i18n (1.14.8)
       concurrent-ruby (~> 1.0)
-    json (2.3.0)
-    minitest (5.14.1)
-    rack (2.2.2)
-    socksify (1.7.1)
-    thread_safe (0.3.6)
-    tzinfo (1.2.7)
-      thread_safe (~> 0.1)
-    zeitwerk (2.3.0)
+    json (2.19.5)
+    jwt (3.2.0)
+      base64
+    logger (1.7.0)
+    minitest (5.26.1)
+    mutex_m (0.3.0)
+    rack (3.2.6)
+    securerandom (0.3.2)
+    tzinfo (2.0.6)
+      concurrent-ruby (~> 1.0)
 
 PLATFORMS
   ruby
